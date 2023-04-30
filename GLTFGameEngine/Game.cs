@@ -3,81 +3,122 @@ using OpenTK.Windowing.Desktop;
 using glTFLoader;
 using OpenTK.Mathematics;
 using glTFLoader.Schema;
+using OpenTK.Graphics.OpenGL4;
+using OpenTK.Windowing.GraphicsLibraryFramework;
 
 namespace GLTFGameEngine
 {
 
     internal class Game : GameWindow
     {
-        private Scene Scene;
+        private SceneWrapper sceneWrapper;
+        private List<Shader> shaders = new List<Shader>();
         public Game(int width, int height, string title) :
             base(GameWindowSettings.Default, new NativeWindowSettings() { Size = (width, height), Title = title })
         {
             // start by loading the gltf file with scene information
-            string sceneFile = "C:\\Projects\\OpenGL\\ModelsGLTF\\Cube\\cube_test.gltf";
+            string sceneFile = "C:\\Projects\\OpenGL\\ModelsGLTF\\Cube\\cube.gltf";
             
-            Scene = Interface.LoadModel<Scene>(sceneFile);
-            Scene.FilePath = sceneFile;
-            Scene.Render = new(Scene);
+            sceneWrapper = Interface.LoadModel<SceneWrapper>(sceneFile);
+            sceneWrapper.FilePath = sceneFile;
+            sceneWrapper.Render = new(sceneWrapper);
+
+            shaders.Add(new("Shaders/pbr.vert", "Shaders/pbr.frag", RenderType.PBR));
+
+            sceneWrapper.Shaders = shaders;
         }
         protected override void OnLoad()
         {
             base.OnLoad();
+
+            GL.ClearColor(0f, 0f, 0f, 1f);
+            GL.Enable(EnableCap.DepthTest);
+
+            CursorState = CursorState.Grabbed;
         }
 
         protected override void OnRenderFrame(FrameEventArgs args)
         {
             base.OnRenderFrame(args);
 
-            // new design pattern 
-            // 1. INIT = initialize the Engine data for the node, mesh, etc.
-            // 2. RENDER = render using the gltf + engine data
-            // why?
-            // this should allow for swapping out between scenes/resources
+            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
-            var scene = Scene.Scenes[Scene.Scene.Value];
+            sceneWrapper.RenderScene();
 
-            Matrix4 view = new();
-            Matrix4 projection = new();
-
-            // iterate through nodes in the scene
-            foreach (var nodeIndex in scene.Nodes)
-            {
-                var node = Scene.Nodes[nodeIndex];
-                var renderNode = Scene.Render.Nodes[nodeIndex];
-
-                // update view and projection matrices from camera
-                if (node.Camera != null)
-                {
-                    // INIT
-                    if (Scene.Render.Nodes[nodeIndex] == null)
-                    {
-                        Scene.Render.Nodes[nodeIndex] = new(node);
-                    }
-
-                    // RENDER
-                    var camera = Scene.Cameras[node.Camera.Value].Perspective;
-
-                    projection = Matrix4.CreatePerspectiveFieldOfView(camera.Yfov, camera.AspectRatio.Value,
-                        camera.Znear, camera.Zfar.Value);
-
-                    view = Matrix4.LookAt(renderNode.Position, renderNode.Position + renderNode.Front, renderNode.Up);
-                }
-
-                renderNode.InitNode(Scene, nodeIndex);
-            }
+            SwapBuffers();
         }
         protected override void OnResize(ResizeEventArgs e)
         {
             base.OnResize(e);
+
+            GL.Viewport(0, 0, Size.X, Size.Y);
+            //_camera.AspectRatio = (float)Size.X / (float)Size.Y;
         }
         protected override void OnUnload()
         {
             base.OnUnload();
         }
-        protected override void OnUpdateFrame(FrameEventArgs args)
+        protected override void OnUpdateFrame(FrameEventArgs e)
         {
-            base.OnUpdateFrame(args);
+            base.OnUpdateFrame(e);
+
+            if (!IsFocused) return;
+
+            var input = KeyboardState;
+            if (input.IsKeyDown(Keys.Escape)) Close();
+
+            var cam = sceneWrapper.Render.Nodes[sceneWrapper.ActiveCamNode];
+            if (cam == null) return;
+
+            const float cameraSpeed = 1.5f;
+            const float sensitivity = 0.2f;
+            if (input.IsKeyDown(Keys.W))
+            {
+                cam.Position += cam.Front * cameraSpeed * (float)e.Time; // Forward
+            }
+
+            if (input.IsKeyDown(Keys.S))
+            {
+                cam.Position -= cam.Front * cameraSpeed * (float)e.Time; // Backwards
+            }
+            if (input.IsKeyDown(Keys.A))
+            {
+                cam.Position -= cam.Right * cameraSpeed * (float)e.Time; // Left
+            }
+            if (input.IsKeyDown(Keys.D))
+            {
+                cam.Position += cam.Right * cameraSpeed * (float)e.Time; // Right
+            }
+            if (input.IsKeyDown(Keys.Space))
+            {
+                cam.Position += cam.Up * cameraSpeed * (float)e.Time; // Up
+            }
+            if (input.IsKeyDown(Keys.LeftShift))
+            {
+                cam.Position -= cam.Up * cameraSpeed * (float)e.Time; // Down
+            }
+
+            // Get the mouse state
+            var mouse = MouseState;
+
+            if (sceneWrapper.FirstMove)
+            {
+                sceneWrapper.LastPos = new Vector2(mouse.X, mouse.Y);
+                sceneWrapper.FirstMove = false;
+            }
+            else
+            {
+                // Calculate the offset of the mouse position
+                var deltaX = mouse.X - sceneWrapper.LastPos.X;
+                var deltaY = mouse.Y - sceneWrapper.LastPos.Y;
+                sceneWrapper.LastPos = new Vector2(mouse.X, mouse.Y);
+
+                // Apply the camera pitch and yaw (we clamp the pitch in the camera class)
+                cam.Yaw += MathHelper.DegreesToRadians(deltaX * sensitivity);
+                cam.Pitch += MathHelper.DegreesToRadians(deltaY * sensitivity); // Reversed since y-coordinates range from bottom to top
+            }
+
+            cam.UpdateVectors();
         }
     }
 }
