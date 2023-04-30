@@ -14,24 +14,10 @@ namespace GLTFGameEngine
     internal class SceneWrapper : glTFLoader.Schema.Gltf
     {
         public string FilePath;
-
         public Render Render;
-
-        public bool FirstMove = true;
-        public Vector2 LastPos;
-
-        public Shader ActiveShader;
-        public Matrix4 Projection;
-        public Matrix4 View;
-        public int ActiveCamNode;
-        public List<Shader> Shaders;
-
-        public SceneWrapper()
-        {
-        }
         public void UseShader(Shader s)
         {
-            ActiveShader = s;
+            Render.ActiveShader = s;
             s.Use();
         }
 
@@ -45,7 +31,7 @@ namespace GLTFGameEngine
 
             var scene = Scenes[Scene.Value];
 
-            foreach (var shader in Shaders)
+            foreach (var shader in Render.Shaders)
             {
                 UseShader(shader);
 
@@ -62,6 +48,15 @@ namespace GLTFGameEngine
                         renderNode = Render.Nodes[nodeIndex];
                     }
 
+                    // INIT LIGHTS
+                    if (node.Extensions != null)
+                    {
+                        if (node.Extensions.ContainsKey("KHR_lights_punctual"))
+                        {
+
+                        }
+                    }
+
                     // RENDER CAMERA
                     // assumption: only one camera node exists
                     if (node.Camera != null)
@@ -69,11 +64,12 @@ namespace GLTFGameEngine
                         
                         var camera = Cameras[node.Camera.Value].Perspective;
 
-                        Projection = Matrix4.CreatePerspectiveFieldOfView(camera.Yfov, camera.AspectRatio.Value,
+                        float fov = camera.Yfov;
+                        Render.Projection = Matrix4.CreatePerspectiveFieldOfView(camera.Yfov, camera.AspectRatio.Value,
                             camera.Znear, camera.Zfar.Value);
-                        View = Matrix4.LookAt(renderNode.Position, renderNode.Position + renderNode.Front, renderNode.Up);
+                        Render.View = Matrix4.LookAt(renderNode.Position, renderNode.Position + renderNode.Front, renderNode.Up);
 
-                        ActiveCamNode = nodeIndex;
+                        Render.ActiveCamNode = nodeIndex;
                     }
 
                     // INIT and RENDER PRIMITIVES
@@ -110,13 +106,32 @@ namespace GLTFGameEngine
         public Camera[] Cameras;
         public Mesh[] Meshes;
         public Node[] Nodes;
+        public List<Light> Lights = new();
+
+        public bool FirstMove = true;
+        public Vector2 LastPos;
+
+        public Shader ActiveShader;
+        public Matrix4 Projection;
+        public Matrix4 View;
+        public int ActiveCamNode;
+        public List<Shader> Shaders;
         public Render(glTFLoader.Schema.Gltf sceneData)
         {
             Cameras = new Camera[sceneData.Cameras.Length];
             Meshes = new Mesh[sceneData.Meshes.Length];
             Nodes = new Node[sceneData.Nodes.Length];
+            
         }
     }
+
+    internal class Light
+    {
+        public int NodeIndex;
+        public Vector3 Color;
+        public float Intensity;
+    }
+
 
     internal class Mesh
     {

@@ -25,7 +25,7 @@ namespace GLTFGameEngine
 
             shaders.Add(new("Shaders/pbr.vert", "Shaders/pbr.frag", RenderType.PBR));
 
-            sceneWrapper.Shaders = shaders;
+            sceneWrapper.Render.Shaders = shaders;
         }
         protected override void OnLoad()
         {
@@ -67,11 +67,18 @@ namespace GLTFGameEngine
             var input = KeyboardState;
             if (input.IsKeyDown(Keys.Escape)) Close();
 
-            var cam = sceneWrapper.Render.Nodes[sceneWrapper.ActiveCamNode];
+            var cam = sceneWrapper.Render.Nodes[sceneWrapper.Render.ActiveCamNode];
             if (cam == null) return;
 
             const float cameraSpeed = 1.5f;
-            const float sensitivity = 0.2f;
+            const float sensitivity = 0.1f;
+            if (input.IsKeyReleased(Keys.Enter))
+            {
+                Console.WriteLine("Pos" + cam.Position.ToString());
+                Console.WriteLine("Yaw" + cam.Yaw.ToString());
+                Console.WriteLine("Pitch" + cam.Pitch.ToString());
+            }
+
             if (input.IsKeyDown(Keys.W))
             {
                 cam.Position += cam.Front * cameraSpeed * (float)e.Time; // Forward
@@ -101,23 +108,22 @@ namespace GLTFGameEngine
             // Get the mouse state
             var mouse = MouseState;
 
-            if (sceneWrapper.FirstMove)
+            if (sceneWrapper.Render.FirstMove)
             {
-                sceneWrapper.LastPos = new Vector2(mouse.X, mouse.Y);
-                sceneWrapper.FirstMove = false;
+                sceneWrapper.Render.LastPos = new Vector2(mouse.X, mouse.Y);
+                sceneWrapper.Render.FirstMove = false;
             }
             else
             {
                 // Calculate the offset of the mouse position
-                var deltaX = mouse.X - sceneWrapper.LastPos.X;
-                var deltaY = mouse.Y - sceneWrapper.LastPos.Y;
-                sceneWrapper.LastPos = new Vector2(mouse.X, mouse.Y);
+                var deltaX = mouse.X - sceneWrapper.Render.LastPos.X;
+                var deltaY = mouse.Y - sceneWrapper.Render.LastPos.Y;
+                sceneWrapper.Render.LastPos = new Vector2(mouse.X, mouse.Y);
 
                 // Apply the camera pitch and yaw (we clamp the pitch in the camera class)
-                cam.Yaw += MathHelper.DegreesToRadians(deltaX * sensitivity);
-                cam.Pitch += MathHelper.DegreesToRadians(deltaY * sensitivity); // Reversed since y-coordinates range from bottom to top
+                cam.Yaw += deltaX * sensitivity;
+                cam.Pitch -= deltaY * sensitivity; // Reversed since y-coordinates range from bottom to top
             }
-
             cam.UpdateVectors();
         }
     }

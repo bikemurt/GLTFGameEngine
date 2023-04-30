@@ -6,18 +6,63 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using OpenTK.Graphics.OpenGL4;
+using System.Diagnostics;
 
 namespace GLTFGameEngine
 {
     internal class Node
     {
-        public float Yaw = 0.0f;
-        public float Pitch = 0.0f;
-        public float Roll = 0.0f;
-        public Vector3 Front = -Vector3.UnitZ;
-        public Vector3 Up = Vector3.UnitY;
-        public Vector3 Right = Vector3.UnitX;
-        public Vector3 Position;
+        // these are in degrees
+        public float Yaw
+        {
+            get
+            {
+                return MathHelper.RadiansToDegrees(yawRad);
+            }
+            set
+            {
+                yawRad = MathHelper.DegreesToRadians(value);
+            }
+        }
+        private float yawRad;
+
+        public float Pitch
+        {
+            get
+            {
+                return MathHelper.RadiansToDegrees(pitchRad);
+            }
+            set
+            {
+                var angle = MathHelper.Clamp(value, -89f, 89f);
+                pitchRad = MathHelper.DegreesToRadians(angle);
+            }
+        }
+        public float pitchRad;
+
+        public float Roll
+        {
+            get
+            {
+                return MathHelper.RadiansToDegrees(rollRad);
+            }
+            set
+            {
+                rollRad = MathHelper.DegreesToRadians(value);
+            }
+        }
+        private float rollRad;
+
+        private Vector3 front = -Vector3.UnitZ;
+        private Vector3 up = Vector3.UnitY;
+        private Vector3 right = Vector3.UnitX;
+
+        public Vector3 Front => front;
+        public Vector3 Up => up;
+        public Vector3 Right => right;
+
+        public Vector3 Position { get; set; }
+
         public List<int> RecurseHistory = new();
 
         private const int RecurseLimit = 100;
@@ -25,34 +70,49 @@ namespace GLTFGameEngine
         {
 
         }
-        public Node(glTFLoader.Schema.Node node, bool rotationCalc = false)
+        public Node(glTFLoader.Schema.Node node, bool isCamera = false)
         {
-            if (rotationCalc)
+            Position = new(node.Translation[0], node.Translation[1], node.Translation[2]);
+
+            if (isCamera)
             {
                 Vector4 q = new(node.Rotation[0], node.Rotation[1], node.Rotation[2], node.Rotation[3]);
-                Roll = MathF.Atan2(2.0f * (q.Z * q.Y + q.W * q.X), 1.0f - 2.0f * (q.X * q.X + q.Y * q.Y));
-                Pitch = MathF.Asin(2.0f * (q.Y * q.W - q.Z * q.X));
-                Yaw = MathF.Atan2(2.0f * (q.Z * q.W + q.X * q.Y), -1.0f + 2.0f * (q.W * q.W + q.X * q.X));
+                float rollRad = MathF.Atan2(2.0f * (q.Z * q.Y + q.W * q.X), 1.0f - 2.0f * (q.X * q.X + q.Y * q.Y));
+                float pitchRad = MathF.Asin(2.0f * (q.Y * q.W - q.Z * q.X));
+                float yawRad = MathF.Atan2(2.0f * (q.Z * q.W + q.X * q.Y), -1.0f + 2.0f * (q.W * q.W + q.X * q.X));
+
+                Pitch = MathHelper.RadiansToDegrees(pitchRad) - 90;
+                Yaw = MathHelper.RadiansToDegrees(yawRad) + 90;
 
                 Quaternion q2 = new(node.Rotation[0], node.Rotation[1], node.Rotation[2], node.Rotation[3]);
-                Vector4 t = q2.ToAxisAngle();
+                Vector3 t1;
+                float angle;
+                q2.ToAxisAngle(out t1, out angle);
                 Vector3 test = q2.ToEulerAngles();
 
                 Console.Write('f');
-            }
 
-            Position = new(node.Translation[0], node.Translation[1], node.Translation[2]);
+                Pitch = 0;
+                Yaw = 0;
+                Roll = 0;
+
+                UpdateVectors();
+            }
         }
         public void UpdateVectors()
         {
-            Front.X = MathF.Cos(Pitch) * MathF.Cos(Yaw);
-            Front.Y = MathF.Sin(Pitch);
-            Front.Z = MathF.Cos(Pitch) * MathF.Sin(Yaw);
+            front.X = MathF.Cos(pitchRad) * MathF.Cos(yawRad - MathF.PI/2);
+            front.Y = MathF.Sin(pitchRad);
+            front.Z = MathF.Cos(pitchRad) * MathF.Sin(yawRad - MathF.PI/2);
 
-            Vector3 front = Vector3.Normalize(Front);
+            front = Vector3.Normalize(front);
 
-            Right = Vector3.Normalize(Vector3.Cross(front, Vector3.UnitY));
-            Up = Vector3.Normalize(Vector3.Cross(Right, front));
+            Matrix4 rollMat = Matrix4.CreateFromAxisAngle(front, rollRad);
+            Matrix3 rollMat3 = new Matrix3(rollMat);
+
+            right = Vector3.Normalize(Vector3.Cross(front, Vector3.UnitY));
+            up = Vector3.Normalize(Vector3.Cross(right, front));
+            //up = rollMat3 * up;
         }
 
         public void ParseNode(SceneWrapper sceneWrapper, int nodeIndex)
@@ -104,7 +164,7 @@ namespace GLTFGameEngine
             {
                 // RENDER
                 var node = sceneWrapper.Nodes[nodeIndex];
-                var s = sceneWrapper.ActiveShader;
+                var s = sceneWrapper.Render.ActiveShader;
                 for (int i = 0; i < mesh.Primitives.Length; i++)
                 {
                     var primitive = mesh.Primitives[i];
@@ -121,24 +181,24 @@ namespace GLTFGameEngine
 
                         Quaternion rotation = new(node.Rotation[0], node.Rotation[1], node.Rotation[2], node.Rotation[3]);
 
-                        Matrix4 model = Matrix4.CreateTranslation(translation) * Matrix4.CreateFromQuaternion(rotation) * Matrix4.CreateScale(scale);
+                        //Matrix4 model = Matrix4.CreateTranslation(translation) * Matrix4.CreateFromQuaternion(rotation) * Matrix4.CreateScale(scale);
                         // assume row-major order inverts this order
 
-                        //Matrix4 model = Matrix4.CreateScale(scale) * Matrix4.CreateFromQuaternion(rotation) * Matrix4.CreateTranslation(translation);
+                        Matrix4 model = Matrix4.CreateScale(scale) * Matrix4.CreateFromQuaternion(rotation) * Matrix4.CreateTranslation(translation);
 
                         s.SetMatrix4("model", model);
-                        s.SetMatrix4("view", sceneWrapper.View);
-                        s.SetMatrix4("projection", sceneWrapper.Projection);
+                        s.SetMatrix4("view", sceneWrapper.Render.View);
+                        s.SetMatrix4("projection", sceneWrapper.Render.Projection);
                     }
 
                     if (s.RenderType == RenderType.PBR)
                     {
                         s.SetInt("pointLightSize", 1);
-                        s.SetVector3("pointLightPositions[0]", new Vector3(1.75863f, 1.00545f, 3.0822f));
+                        s.SetVector3("pointLightPositions[0]", new Vector3(1.75863f, 3.0822f, -1.00545f));
                         s.SetVector3("pointLightColors[0]", new Vector3(10.0f, 10.0f, 10.0f));
                     }
 
-                    s.SetVector3("camPos", sceneWrapper.Render.Nodes[sceneWrapper.ActiveCamNode].Position);
+                    s.SetVector3("camPos", sceneWrapper.Render.Nodes[sceneWrapper.Render.ActiveCamNode].Position);
 
                     // draw mesh
                     GL.BindVertexArray(renderPrimitive.VertexArrayObject);

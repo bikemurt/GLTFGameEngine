@@ -38,8 +38,15 @@ namespace GLTFGameEngine
             var uvBufferView = sceneWrapper.BufferViews[primitive.Attributes["TEXCOORD_0"]];
             var normalBufferView = sceneWrapper.BufferViews[primitive.Attributes["NORMAL"]];
             var tangentBufferView = sceneWrapper.BufferViews[primitive.Attributes["TANGENT"]];
-            var jointBufferView = sceneWrapper.BufferViews[primitive.Attributes["JOINTS_0"]];
-            var weightBufferView = sceneWrapper.BufferViews[primitive.Attributes["WEIGHTS_0"]];
+
+            bool isAnimated = primitive.Attributes.ContainsKey("JOINTS_0") && primitive.Attributes.ContainsKey("WEIGHTS_0");
+            BufferView jointBufferView = new();
+            BufferView weightBufferView = new();
+            if (isAnimated)
+            {
+                jointBufferView = sceneWrapper.BufferViews[primitive.Attributes["JOINTS_0"]];
+                weightBufferView = sceneWrapper.BufferViews[primitive.Attributes["WEIGHTS_0"]];
+            }
 
             var indicesBufferView = sceneWrapper.BufferViews[primitive.Indices.Value];
 
@@ -78,6 +85,7 @@ namespace GLTFGameEngine
             // tangent
             GL.VertexAttribPointer(3, 4, VertexAttribPointerType.Float, false, 4 * sizeof(float), tangentBufferView.ByteOffset);
             GL.EnableVertexAttribArray(3);
+
             // joints
             GL.VertexAttribPointer(4, 4, VertexAttribPointerType.Float, false, 4 * sizeof(float), jointBufferView.ByteOffset);
             GL.EnableVertexAttribArray(4);
@@ -112,11 +120,11 @@ namespace GLTFGameEngine
             Textures.Add(new(metallicRoughnessPath));
             Textures.Add(new(normalPath));
 
-            if (sceneWrapper.ActiveShader.ShaderTextureNames.Count == 0)
+            if (sceneWrapper.Render.ActiveShader.ShaderTextureNames.Count == 0)
             {
-                sceneWrapper.ActiveShader.ShaderTextureNames.Add("albedoMap");
-                sceneWrapper.ActiveShader.ShaderTextureNames.Add("metallicRoughnessMap");
-                sceneWrapper.ActiveShader.ShaderTextureNames.Add("normalMap");
+                sceneWrapper.Render.ActiveShader.ShaderTextureNames.Add("albedoMap");
+                sceneWrapper.Render.ActiveShader.ShaderTextureNames.Add("metallicRoughnessMap");
+                sceneWrapper.Render.ActiveShader.ShaderTextureNames.Add("normalMap");
             }
         }
 
