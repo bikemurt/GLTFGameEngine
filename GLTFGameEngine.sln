@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33205.214
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GLTFGameEngine", "GLTFGameEngine\GLTFGameEngine.csproj", "{715AECB3-C9AF-40CC-860E-421A06348DD7}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{715AECB3-C9AF-40CC-860E-421A06348DD7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{715AECB3-C9AF-40CC-860E-421A06348DD7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{715AECB3-C9AF-40CC-860E-421A06348DD7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{715AECB3-C9AF-40CC-860E-421A06348DD7}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {39007911-CEA0-4A6F-AFDF-F7E35CF5C1FE}
+	EndGlobalSection
+EndGlobal
