@@ -11,9 +11,19 @@ namespace GLTFGameEngine
     {
         public readonly int Handle;
 
+        public static Dictionary<string, int> TextureLibrary = new();
+
         public Texture(string path)
         {
-            Handle = LoadFromFile(path);
+            if (TextureLibrary.ContainsKey(path))
+            {
+                Handle = TextureLibrary[path];
+            }
+            else
+            {
+                Handle = LoadFromFile(path);
+                TextureLibrary.Add(path, Handle);
+            }
         }
 
         private int LoadFromFile(string path)

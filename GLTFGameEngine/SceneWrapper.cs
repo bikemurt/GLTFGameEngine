@@ -15,6 +15,7 @@ namespace GLTFGameEngine
     {
         public string FilePath;
         public Render Render;
+        public Dictionary<string, byte[]> BufferBytes = new();
         public void UseShader(Shader s)
         {
             Render.ActiveShader = s;
@@ -44,6 +45,7 @@ namespace GLTFGameEngine
                     // INIT NODES
                     if (Render.Nodes[nodeIndex] == null)
                     {
+                        // this only generates the top level node.
                         Render.Nodes[nodeIndex] = new(node, node.Camera != null);
                         renderNode = Render.Nodes[nodeIndex];
                     }
@@ -64,7 +66,6 @@ namespace GLTFGameEngine
                         
                         var camera = Cameras[node.Camera.Value].Perspective;
 
-                        float fov = camera.Yfov;
                         Render.Projection = Matrix4.CreatePerspectiveFieldOfView(camera.Yfov, camera.AspectRatio.Value,
                             camera.Znear, camera.Zfar.Value);
                         Render.View = Matrix4.LookAt(renderNode.Position, renderNode.Position + renderNode.Front, renderNode.Up);
@@ -75,6 +76,7 @@ namespace GLTFGameEngine
                     // INIT and RENDER PRIMITIVES
                     if (renderNode != null)
                     {
+                        renderNode.Translation = Vector3.Zero;
                         renderNode.ParseNode(this, nodeIndex);
                     }
 
@@ -98,6 +100,24 @@ namespace GLTFGameEngine
                     shader.TextureIntsSet = true;
                 }
 
+            }
+        }
+
+        public void Release()
+        {
+            foreach (var shader in Render.Shaders)
+            {
+                GL.DeleteProgram(shader.Handle);
+
+                foreach (var mesh in Render.Meshes)
+                {
+                    foreach (var primitive in mesh.Primitives)
+                    {
+                        GL.DeleteBuffer(primitive.VertexArrayObject);
+                        GL.DeleteBuffer(primitive.VertexBufferObject);
+                        GL.DeleteBuffer(primitive.ElementBufferObject);
+                    }
+                }
             }
         }
     }

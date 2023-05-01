@@ -57,6 +57,12 @@ namespace GLTFGameEngine
         protected override void OnUnload()
         {
             base.OnUnload();
+
+            GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
+            GL.BindVertexArray(0);
+            GL.UseProgram(0);
+
+            sceneWrapper.Release();
         }
         protected override void OnUpdateFrame(FrameEventArgs e)
         {

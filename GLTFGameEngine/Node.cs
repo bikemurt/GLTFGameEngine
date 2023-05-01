@@ -66,16 +66,17 @@ namespace GLTFGameEngine
         public List<int> RecurseHistory = new();
 
         private const int RecurseLimit = 100;
+        public Vector3 Translation = Vector3.Zero;
         public Node()
         {
 
         }
         public Node(glTFLoader.Schema.Node node, bool isCamera = false)
         {
-            Position = new(node.Translation[0], node.Translation[1], node.Translation[2]);
-
             if (isCamera)
             {
+                Position = new(node.Translation[0], node.Translation[1], node.Translation[2]);
+
                 Vector4 q = new(node.Rotation[0], node.Rotation[1], node.Rotation[2], node.Rotation[3]);
                 float rollRad = MathF.Atan2(2.0f * (q.Z * q.Y + q.W * q.X), 1.0f - 2.0f * (q.X * q.X + q.Y * q.Y));
                 float pitchRad = MathF.Asin(2.0f * (q.Y * q.W - q.Z * q.X));
@@ -115,7 +116,7 @@ namespace GLTFGameEngine
             //up = rollMat3 * up;
         }
 
-        public void ParseNode(SceneWrapper sceneWrapper, int nodeIndex)
+        public void ParseNode(SceneWrapper sceneWrapper, int nodeIndex, int parentIndex = -1)
         {
             // recursion protection
             if (RecurseHistory.Contains(nodeIndex)) throw new Exception("Recursion loop found at node index " + nodeIndex);
@@ -127,6 +128,20 @@ namespace GLTFGameEngine
             }
 
             var node = sceneWrapper.Nodes[nodeIndex];
+            var renderNode = sceneWrapper.Render.Nodes[nodeIndex];
+            if (node.Translation != null)
+            {
+                renderNode.Translation += new Vector3(node.Translation[0], node.Translation[1], node.Translation[2]);
+            }
+            if (parentIndex != -1)
+            {
+                var parentRenderNode = sceneWrapper.Render.Nodes[parentIndex];
+                if (parentRenderNode != null && parentRenderNode.Translation != null)
+                {
+                    renderNode.Translation += parentRenderNode.Translation;
+                }
+            }    
+
             if (node.Mesh != null)
             {
                 OnRenderFrameMesh(sceneWrapper, nodeIndex);
@@ -136,7 +151,8 @@ namespace GLTFGameEngine
             {
                 foreach (var childIndex in node.Children)
                 {
-                    ParseNode(sceneWrapper, childIndex);
+                    sceneWrapper.Render.Nodes[childIndex] = new();
+                    ParseNode(sceneWrapper, childIndex, nodeIndex);
                 }
             }
         }
@@ -164,27 +180,30 @@ namespace GLTFGameEngine
             {
                 // RENDER
                 var node = sceneWrapper.Nodes[nodeIndex];
+                var renderNode = sceneWrapper.Render.Nodes[nodeIndex];
                 var s = sceneWrapper.Render.ActiveShader;
                 for (int i = 0; i < mesh.Primitives.Length; i++)
                 {
-                    var primitive = mesh.Primitives[i];
                     var renderPrimitive = sceneWrapper.Render.Meshes[meshIndex].Primitives[i];
 
                     // bind textures
-                    for (int j = 0; j < renderPrimitive.Textures.Count; j++) renderPrimitive.Textures[j].Use(TextureUnit.Texture0 + j);
+                    for (int j = 0; j < renderPrimitive.Textures.Count; j++)
+                    {
+                        renderPrimitive.Textures[j].Use(TextureUnit.Texture0 + j);
+                    }
 
                     // set projection and view matrices
                     if (s.RenderType == RenderType.PBR || s.RenderType == RenderType.Light)
                     {
-                        Vector3 translation = new(node.Translation[0], node.Translation[1], node.Translation[2]);
-                        Vector3 scale = new(node.Scale[0], node.Scale[1], node.Scale[2]);
+                        //Vector3 translation = new(node.Translation[0], node.Translation[1], node.Translation[2]);
+                        //Vector3 scale = new(node.Scale[0], node.Scale[1], node.Scale[2]);
 
-                        Quaternion rotation = new(node.Rotation[0], node.Rotation[1], node.Rotation[2], node.Rotation[3]);
+                        //Quaternion rotation = new(node.Rotation[0], node.Rotation[1], node.Rotation[2], node.Rotation[3]);
 
                         //Matrix4 model = Matrix4.CreateTranslation(translation) * Matrix4.CreateFromQuaternion(rotation) * Matrix4.CreateScale(scale);
                         // assume row-major order inverts this order
 
-                        Matrix4 model = Matrix4.CreateScale(scale) * Matrix4.CreateFromQuaternion(rotation) * Matrix4.CreateTranslation(translation);
+                        Matrix4 model = Matrix4.CreateTranslation(renderNode.Translation);
 
                         s.SetMatrix4("model", model);
                         s.SetMatrix4("view", sceneWrapper.Render.View);
@@ -195,7 +214,7 @@ namespace GLTFGameEngine
                     {
                         s.SetInt("pointLightSize", 1);
                         s.SetVector3("pointLightPositions[0]", new Vector3(1.75863f, 3.0822f, -1.00545f));
-                        s.SetVector3("pointLightColors[0]", new Vector3(10.0f, 10.0f, 10.0f));
+                        s.SetVector3("pointLightColors[0]", new Vector3(100.0f, 100.0f, 100.0f));
                     }
 
                     s.SetVector3("camPos", sceneWrapper.Render.Nodes[sceneWrapper.Render.ActiveCamNode].Position);

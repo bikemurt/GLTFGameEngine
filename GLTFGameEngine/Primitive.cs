@@ -39,10 +39,14 @@ namespace GLTFGameEngine
             var normalBufferView = sceneWrapper.BufferViews[primitive.Attributes["NORMAL"]];
             var tangentBufferView = sceneWrapper.BufferViews[primitive.Attributes["TANGENT"]];
 
-            bool isAnimated = primitive.Attributes.ContainsKey("JOINTS_0") && primitive.Attributes.ContainsKey("WEIGHTS_0");
             BufferView jointBufferView = new();
             BufferView weightBufferView = new();
-            if (isAnimated)
+            bool skeleton = false;
+            if (primitive.Attributes.ContainsKey("JOINTS_0") && primitive.Attributes.ContainsKey("WEIGHTS_0"))
+            {
+                skeleton = true;
+            }
+            if (skeleton)
             {
                 jointBufferView = sceneWrapper.BufferViews[primitive.Attributes["JOINTS_0"]];
                 weightBufferView = sceneWrapper.BufferViews[primitive.Attributes["WEIGHTS_0"]];
@@ -50,47 +54,53 @@ namespace GLTFGameEngine
 
             var indicesBufferView = sceneWrapper.BufferViews[primitive.Indices.Value];
 
-
             var buffer = sceneWrapper.Buffers[posBufferView.Buffer];
 
             byte[] bufferBytes;
             if (buffer.Uri.Contains(".bin"))
             {
-                string folder = Path.GetDirectoryName(sceneWrapper.FilePath);
-                bufferBytes = File.ReadAllBytes(folder + "\\" + buffer.Uri);
+                string binPath = Path.GetDirectoryName(sceneWrapper.FilePath) + "\\" + buffer.Uri;
+                if (!sceneWrapper.BufferBytes.ContainsKey(binPath))
+                {
+                    bufferBytes = File.ReadAllBytes(binPath);
+                }
+                else
+                {
+                    bufferBytes = sceneWrapper.BufferBytes[binPath];
+                }
             }
             else
             {
+                // this is not really optimized but i don't intend on using this version of GLTF
                 bufferBytes = Convert.FromBase64String(buffer.Uri.Substring(37));
             }
 
             // populate vertex data buffer
             // we can take advantage of the fact that Blender packs all vertex data prior to the index
-            int vertexBufferLength = indicesBufferView.ByteOffset;
+            int vertexBufferLength = indicesBufferView.ByteOffset - posBufferView.ByteOffset;
 
             float[] bufferFloats = new float[vertexBufferLength / 4];
-            System.Buffer.BlockCopy(bufferBytes, 0, bufferFloats, 0, vertexBufferLength);
-            GL.BufferData(BufferTarget.ArrayBuffer, bufferBytes.Length, bufferFloats, BufferUsageHint.StaticDraw);
+            System.Buffer.BlockCopy(bufferBytes, posBufferView.ByteOffset, bufferFloats, 0, vertexBufferLength);
+            GL.BufferData(BufferTarget.ArrayBuffer, vertexBufferLength, bufferFloats, BufferUsageHint.StaticDraw);
 
             // set vertex attrib pointers
             // position
-            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), posBufferView.ByteOffset);
+            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
             GL.EnableVertexAttribArray(0);
             // UV
-            GL.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 2 * sizeof(float), uvBufferView.ByteOffset);
+            GL.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 2 * sizeof(float), uvBufferView.ByteOffset - posBufferView.ByteOffset);
             GL.EnableVertexAttribArray(1);
             // normal
-            GL.VertexAttribPointer(2, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), normalBufferView.ByteOffset);
+            GL.VertexAttribPointer(2, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), normalBufferView.ByteOffset - posBufferView.ByteOffset);
             GL.EnableVertexAttribArray(2);
             // tangent
-            GL.VertexAttribPointer(3, 4, VertexAttribPointerType.Float, false, 4 * sizeof(float), tangentBufferView.ByteOffset);
+            GL.VertexAttribPointer(3, 4, VertexAttribPointerType.Float, false, 4 * sizeof(float), tangentBufferView.ByteOffset - posBufferView.ByteOffset);
             GL.EnableVertexAttribArray(3);
-
             // joints
-            GL.VertexAttribPointer(4, 4, VertexAttribPointerType.Float, false, 4 * sizeof(float), jointBufferView.ByteOffset);
+            GL.VertexAttribPointer(4, 4, VertexAttribPointerType.Float, false, 4 * sizeof(float), jointBufferView.ByteOffset - posBufferView.ByteOffset);
             GL.EnableVertexAttribArray(4);
             // weights
-            GL.VertexAttribPointer(5, 4, VertexAttribPointerType.Float, false, 4 * sizeof(float), weightBufferView.ByteOffset);
+            GL.VertexAttribPointer(5, 4, VertexAttribPointerType.Float, false, 4 * sizeof(float), weightBufferView.ByteOffset - posBufferView.ByteOffset);
             GL.EnableVertexAttribArray(5);
 
             // indices
