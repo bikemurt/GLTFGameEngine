@@ -73,7 +73,8 @@ namespace GLTFGameEngine
             var input = KeyboardState;
             if (input.IsKeyDown(Keys.Escape)) Close();
 
-            var cam = sceneWrapper.Render.Nodes[sceneWrapper.Render.ActiveCamNode];
+            if (sceneWrapper.Render.Nodes[sceneWrapper.Render.ActiveCamNode] == null) return;
+            var cam = sceneWrapper.Render.Nodes[sceneWrapper.Render.ActiveCamNode].Camera;
             if (cam == null) return;
 
             const float cameraSpeed = 1.5f;

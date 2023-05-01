@@ -60,13 +60,13 @@ namespace GLTFGameEngine
             if (buffer.Uri.Contains(".bin"))
             {
                 string binPath = Path.GetDirectoryName(sceneWrapper.FilePath) + "\\" + buffer.Uri;
-                if (!sceneWrapper.BufferBytes.ContainsKey(binPath))
+                if (!DataStore.BufferBytes.ContainsKey(binPath))
                 {
                     bufferBytes = File.ReadAllBytes(binPath);
                 }
                 else
                 {
-                    bufferBytes = sceneWrapper.BufferBytes[binPath];
+                    bufferBytes = DataStore.BufferBytes[binPath];
                 }
             }
             else
@@ -96,12 +96,16 @@ namespace GLTFGameEngine
             // tangent
             GL.VertexAttribPointer(3, 4, VertexAttribPointerType.Float, false, 4 * sizeof(float), tangentBufferView.ByteOffset - posBufferView.ByteOffset);
             GL.EnableVertexAttribArray(3);
-            // joints
-            GL.VertexAttribPointer(4, 4, VertexAttribPointerType.Float, false, 4 * sizeof(float), jointBufferView.ByteOffset - posBufferView.ByteOffset);
-            GL.EnableVertexAttribArray(4);
-            // weights
-            GL.VertexAttribPointer(5, 4, VertexAttribPointerType.Float, false, 4 * sizeof(float), weightBufferView.ByteOffset - posBufferView.ByteOffset);
-            GL.EnableVertexAttribArray(5);
+
+            if (skeleton)
+            {
+                // joints
+                GL.VertexAttribPointer(4, 4, VertexAttribPointerType.Float, false, 4 * sizeof(float), jointBufferView.ByteOffset - posBufferView.ByteOffset);
+                GL.EnableVertexAttribArray(4);
+                // weights
+                GL.VertexAttribPointer(5, 4, VertexAttribPointerType.Float, false, 4 * sizeof(float), weightBufferView.ByteOffset - posBufferView.ByteOffset);
+                GL.EnableVertexAttribArray(5);
+            }
 
             // indices
             ushort[] indices = new ushort[indicesBufferView.ByteLength / 2];

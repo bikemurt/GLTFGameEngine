@@ -12,108 +12,22 @@ namespace GLTFGameEngine
 {
     internal class Node
     {
-        // these are in degrees
-        public float Yaw
-        {
-            get
-            {
-                return MathHelper.RadiansToDegrees(yawRad);
-            }
-            set
-            {
-                yawRad = MathHelper.DegreesToRadians(value);
-            }
-        }
-        private float yawRad;
-
-        public float Pitch
-        {
-            get
-            {
-                return MathHelper.RadiansToDegrees(pitchRad);
-            }
-            set
-            {
-                var angle = MathHelper.Clamp(value, -89f, 89f);
-                pitchRad = MathHelper.DegreesToRadians(angle);
-            }
-        }
-        public float pitchRad;
-
-        public float Roll
-        {
-            get
-            {
-                return MathHelper.RadiansToDegrees(rollRad);
-            }
-            set
-            {
-                rollRad = MathHelper.DegreesToRadians(value);
-            }
-        }
-        private float rollRad;
-
-        private Vector3 front = -Vector3.UnitZ;
-        private Vector3 up = Vector3.UnitY;
-        private Vector3 right = Vector3.UnitX;
-
-        public Vector3 Front => front;
-        public Vector3 Up => up;
-        public Vector3 Right => right;
-
-        public Vector3 Position { get; set; }
-
+        public Camera Camera;
         public List<int> RecurseHistory = new();
-
         private const int RecurseLimit = 100;
         public Vector3 Translation = Vector3.Zero;
+        public Vector3 Scale = Vector3.One;
+        public Quaternion Rotation = Quaternion.Identity;
         public Node()
         {
 
         }
         public Node(glTFLoader.Schema.Node node, bool isCamera = false)
         {
-            if (isCamera)
+            if (node.Camera != null)
             {
-                Position = new(node.Translation[0], node.Translation[1], node.Translation[2]);
-
-                Vector4 q = new(node.Rotation[0], node.Rotation[1], node.Rotation[2], node.Rotation[3]);
-                float rollRad = MathF.Atan2(2.0f * (q.Z * q.Y + q.W * q.X), 1.0f - 2.0f * (q.X * q.X + q.Y * q.Y));
-                float pitchRad = MathF.Asin(2.0f * (q.Y * q.W - q.Z * q.X));
-                float yawRad = MathF.Atan2(2.0f * (q.Z * q.W + q.X * q.Y), -1.0f + 2.0f * (q.W * q.W + q.X * q.X));
-
-                Pitch = MathHelper.RadiansToDegrees(pitchRad) - 90;
-                Yaw = MathHelper.RadiansToDegrees(yawRad) + 90;
-
-                Quaternion q2 = new(node.Rotation[0], node.Rotation[1], node.Rotation[2], node.Rotation[3]);
-                Vector3 t1;
-                float angle;
-                q2.ToAxisAngle(out t1, out angle);
-                Vector3 test = q2.ToEulerAngles();
-
-                Console.Write('f');
-
-                Pitch = 0;
-                Yaw = 0;
-                Roll = 0;
-
-                UpdateVectors();
+                Camera = new(node);
             }
-        }
-        public void UpdateVectors()
-        {
-            front.X = MathF.Cos(pitchRad) * MathF.Cos(yawRad - MathF.PI/2);
-            front.Y = MathF.Sin(pitchRad);
-            front.Z = MathF.Cos(pitchRad) * MathF.Sin(yawRad - MathF.PI/2);
-
-            front = Vector3.Normalize(front);
-
-            Matrix4 rollMat = Matrix4.CreateFromAxisAngle(front, rollRad);
-            Matrix3 rollMat3 = new Matrix3(rollMat);
-
-            right = Vector3.Normalize(Vector3.Cross(front, Vector3.UnitY));
-            up = Vector3.Normalize(Vector3.Cross(right, front));
-            //up = rollMat3 * up;
         }
 
         public void ParseNode(SceneWrapper sceneWrapper, int nodeIndex, int parentIndex = -1)
@@ -133,18 +47,29 @@ namespace GLTFGameEngine
             {
                 renderNode.Translation += new Vector3(node.Translation[0], node.Translation[1], node.Translation[2]);
             }
+            if (node.Rotation != null)
+            {
+                renderNode.Rotation = new Quaternion(node.Rotation[0], node.Rotation[1], node.Rotation[2], node.Rotation[3]);
+            }
+            if (node.Scale != null)
+            {
+                renderNode.Scale = new Vector3(node.Scale[0], node.Scale[1], node.Scale[2]);
+            }
+            /*
             if (parentIndex != -1)
             {
                 var parentRenderNode = sceneWrapper.Render.Nodes[parentIndex];
                 if (parentRenderNode != null && parentRenderNode.Translation != null)
                 {
                     renderNode.Translation += parentRenderNode.Translation;
+                    renderNode.Scale *= parentRenderNode.Scale;
                 }
             }    
+            */
 
             if (node.Mesh != null)
             {
-                OnRenderFrameMesh(sceneWrapper, nodeIndex);
+                RenderMesh(sceneWrapper, nodeIndex);
                 return;
             }
             if (node.Children != null)
@@ -157,7 +82,7 @@ namespace GLTFGameEngine
             }
         }
 
-        public static void OnRenderFrameMesh(SceneWrapper sceneWrapper, int nodeIndex)
+        public static void RenderMesh(SceneWrapper sceneWrapper, int nodeIndex)
         {
             int meshIndex = sceneWrapper.Nodes[nodeIndex].Mesh.Value;
             var mesh = sceneWrapper.Meshes[meshIndex];
@@ -195,15 +120,8 @@ namespace GLTFGameEngine
                     // set projection and view matrices
                     if (s.RenderType == RenderType.PBR || s.RenderType == RenderType.Light)
                     {
-                        //Vector3 translation = new(node.Translation[0], node.Translation[1], node.Translation[2]);
-                        //Vector3 scale = new(node.Scale[0], node.Scale[1], node.Scale[2]);
-
-                        //Quaternion rotation = new(node.Rotation[0], node.Rotation[1], node.Rotation[2], node.Rotation[3]);
-
-                        //Matrix4 model = Matrix4.CreateTranslation(translation) * Matrix4.CreateFromQuaternion(rotation) * Matrix4.CreateScale(scale);
-                        // assume row-major order inverts this order
-
-                        Matrix4 model = Matrix4.CreateTranslation(renderNode.Translation);
+                        Matrix4 model = Matrix4.CreateFromQuaternion(renderNode.Rotation)
+                            * Matrix4.CreateScale(renderNode.Scale) * Matrix4.CreateTranslation(renderNode.Translation);
 
                         s.SetMatrix4("model", model);
                         s.SetMatrix4("view", sceneWrapper.Render.View);
@@ -217,7 +135,7 @@ namespace GLTFGameEngine
                         s.SetVector3("pointLightColors[0]", new Vector3(100.0f, 100.0f, 100.0f));
                     }
 
-                    s.SetVector3("camPos", sceneWrapper.Render.Nodes[sceneWrapper.Render.ActiveCamNode].Position);
+                    s.SetVector3("camPos", sceneWrapper.Render.Nodes[sceneWrapper.Render.ActiveCamNode].Camera.Position);
 
                     // draw mesh
                     GL.BindVertexArray(renderPrimitive.VertexArrayObject);

@@ -15,7 +15,6 @@ namespace GLTFGameEngine
     {
         public string FilePath;
         public Render Render;
-        public Dictionary<string, byte[]> BufferBytes = new();
         public void UseShader(Shader s)
         {
             Render.ActiveShader = s;
@@ -46,7 +45,7 @@ namespace GLTFGameEngine
                     if (Render.Nodes[nodeIndex] == null)
                     {
                         // this only generates the top level node.
-                        Render.Nodes[nodeIndex] = new(node, node.Camera != null);
+                        Render.Nodes[nodeIndex] = new(node);
                         renderNode = Render.Nodes[nodeIndex];
                     }
 
@@ -61,14 +60,14 @@ namespace GLTFGameEngine
 
                     // RENDER CAMERA
                     // assumption: only one camera node exists
-                    if (node.Camera != null)
+                    if (node.Camera != null && renderNode.Camera != null)
                     {
-                        
                         var camera = Cameras[node.Camera.Value].Perspective;
 
                         Render.Projection = Matrix4.CreatePerspectiveFieldOfView(camera.Yfov, camera.AspectRatio.Value,
                             camera.Znear, camera.Zfar.Value);
-                        Render.View = Matrix4.LookAt(renderNode.Position, renderNode.Position + renderNode.Front, renderNode.Up);
+                        Render.View = Matrix4.LookAt(renderNode.Camera.Position,
+                            renderNode.Camera.Position + renderNode.Camera.Front, renderNode.Camera.Up);
 
                         Render.ActiveCamNode = nodeIndex;
                     }
@@ -123,7 +122,6 @@ namespace GLTFGameEngine
     }
     internal class Render
     {
-        public Camera[] Cameras;
         public Mesh[] Meshes;
         public Node[] Nodes;
         public List<Light> Lights = new();
@@ -138,10 +136,8 @@ namespace GLTFGameEngine
         public List<Shader> Shaders;
         public Render(glTFLoader.Schema.Gltf sceneData)
         {
-            Cameras = new Camera[sceneData.Cameras.Length];
             Meshes = new Mesh[sceneData.Meshes.Length];
             Nodes = new Node[sceneData.Nodes.Length];
-            
         }
     }
 
@@ -152,14 +148,14 @@ namespace GLTFGameEngine
         public float Intensity;
     }
 
-
     internal class Mesh
     {
         public Primitive[] Primitives;
     }
 
-    internal class Camera
+    internal static class DataStore
     {
-
+        public static Dictionary<string, byte[]> BufferBytes = new();
     }
+
 }
