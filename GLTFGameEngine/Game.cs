@@ -80,7 +80,7 @@ namespace GLTFGameEngine
             if (cam == null) return;
 
             const float cameraSpeed = 1.5f;
-            const float sensitivity = 0.1f;
+            const float sensitivity = 0.05f;
             if (input.IsKeyReleased(Keys.Enter))
             {
                 Console.WriteLine("Pos" + cam.Position.ToString());
@@ -90,8 +90,7 @@ namespace GLTFGameEngine
 
             if (input.IsKeyDown(Keys.W))
             {
-                cam.Position += -Vector3.UnitZ * Matrix3.CreateFromQuaternion(cam.Rotation) * (float)e.Time;
-                //cam.Position += cam.Front * cameraSpeed * (float)e.Time; // Forward
+                cam.Position += cam.Front * cameraSpeed * (float)e.Time; // Forward
             }
 
             if (input.IsKeyDown(Keys.S))
@@ -129,6 +128,12 @@ namespace GLTFGameEngine
                 var deltaX = mouse.X - sceneWrapper.Render.LastPos.X;
                 var deltaY = mouse.Y - sceneWrapper.Render.LastPos.Y;
                 sceneWrapper.Render.LastPos = new Vector2(mouse.X, mouse.Y);
+
+                //var euler = cam.Rotation.ToEulerAngles();
+                //euler.Y += deltaX * sensitivity;
+                //euler.X += deltaY * sensitivity;
+
+                //cam.Rotation = Quaternion.FromEulerAngles(euler);
 
                 // Apply the camera pitch and yaw (we clamp the pitch in the camera class)
                 cam.Yaw += deltaX * sensitivity;

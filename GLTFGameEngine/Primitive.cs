@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using OpenTK.Graphics.OpenGL4;
 using StbImageSharp;
 using glTFLoader.Schema;
+using glTFLoader;
 
 namespace GLTFGameEngine
 {
@@ -57,22 +58,32 @@ namespace GLTFGameEngine
             var buffer = sceneWrapper.Buffers[posBufferView.Buffer];
 
             byte[] bufferBytes;
-            if (buffer.Uri.Contains(".bin"))
+            if (buffer.Uri != null)
             {
-                string binPath = Path.GetDirectoryName(sceneWrapper.FilePath) + "\\" + buffer.Uri;
-                if (!DataStore.BufferBytes.ContainsKey(binPath))
+                if (buffer.Uri.Contains(".bin"))
                 {
-                    bufferBytes = File.ReadAllBytes(binPath);
+                    string binPath = Path.GetDirectoryName(sceneWrapper.FilePath) + "\\" + buffer.Uri;
+                    if (!DataStore.BufferBytes.ContainsKey(binPath))
+                    {
+                        bufferBytes = File.ReadAllBytes(binPath);
+                    }
+                    else
+                    {
+                        bufferBytes = DataStore.BufferBytes[binPath];
+                    }
                 }
                 else
                 {
-                    bufferBytes = DataStore.BufferBytes[binPath];
+                    // this is not really optimized but i don't intend on using this version of GLTF
+                    bufferBytes = Convert.FromBase64String(buffer.Uri.Substring(37));
                 }
             }
             else
             {
-                // this is not really optimized but i don't intend on using this version of GLTF
-                bufferBytes = Convert.FromBase64String(buffer.Uri.Substring(37));
+                // glb file parsing
+                // still need to do more work here - vertex data might be okay but not sure
+                // how to load textures which are in the binary data
+                bufferBytes = Interface.LoadBinaryBuffer((Gltf)sceneWrapper, posBufferView.Buffer, sceneWrapper.FilePath);
             }
 
             // populate vertex data buffer

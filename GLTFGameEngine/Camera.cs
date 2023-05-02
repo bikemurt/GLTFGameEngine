@@ -36,24 +36,12 @@ namespace GLTFGameEngine
                 pitchRad = MathHelper.DegreesToRadians(angle);
             }
         }
-        public float pitchRad;
-
-        public float Roll
-        {
-            get
-            {
-                return MathHelper.RadiansToDegrees(rollRad);
-            }
-            set
-            {
-                rollRad = MathHelper.DegreesToRadians(value);
-            }
-        }
-        private float rollRad;
+        public float pitchRad = 0;
 
         private Vector3 front = -Vector3.UnitZ;
         private Vector3 up = Vector3.UnitY;
         private Vector3 right = Vector3.UnitX;
+        private Vector3 worldUp = Vector3.UnitY;
 
         public Vector3 Front => front;
         public Vector3 Up => up;
@@ -69,15 +57,17 @@ namespace GLTFGameEngine
             {
                 Position = new Vector3(node.Translation[0], node.Translation[1], node.Translation[2]);
             }
+            /*
             if (node.Rotation != null)
             {
                 Rotation = new Quaternion(node.Rotation[0], node.Rotation[1], node.Rotation[2], node.Rotation[3]);
                 Rotation = Quaternion.Conjugate(Rotation);
             }
+            worldUp = worldUp * Matrix3.CreateRotationX(rollRad);
+            */
 
-            Pitch = 0;
-            Yaw = 0;
-            Roll = 0;
+            Pitch = -30;
+            Yaw = 45;
 
             UpdateVectors();
         }
@@ -89,12 +79,18 @@ namespace GLTFGameEngine
 
             front = Vector3.Normalize(front);
 
-            Matrix4 rollMat = Matrix4.CreateFromAxisAngle(front, rollRad);
-            Matrix3 rollMat3 = new Matrix3(rollMat);
+            // Quaternion logic
+            //Matrix4 camRot = Matrix4.CreateFromQuaternion(Rotation);
+            //front = -Vector3.Normalize(camRot.Column2.Xyz);
 
-            right = Vector3.Normalize(Vector3.Cross(front, Vector3.UnitY));
+            // Roll logic
+            // Matrix4 rollMat = Matrix4.CreateFromAxisAngle(front, rollRad);
+            // Matrix3 rollMat3 = new Matrix3(rollMat);
+
+            right = Vector3.Normalize(Vector3.Cross(front, worldUp));
             up = Vector3.Normalize(Vector3.Cross(right, front));
-            up = rollMat3 * up;
+
+            // up = up * rollMat3;
         }
     }
 

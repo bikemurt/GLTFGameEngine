@@ -67,12 +67,13 @@ namespace GLTFGameEngine
                         Render.Projection = Matrix4.CreatePerspectiveFieldOfView(camera.Yfov, camera.AspectRatio.Value,
                             camera.Znear, camera.Zfar.Value);
 
-                        Matrix4 rot = Matrix4.CreateFromQuaternion(renderNode.Camera.Rotation);
-                        Matrix4 trans = Matrix4.CreateTranslation(-renderNode.Camera.Position);
-                        Render.View = trans * rot;
+                        // retain this quaternion code, it's interesting
+                        //Matrix4 rot = Matrix4.CreateFromQuaternion(renderNode.Camera.Rotation);
+                        //Matrix4 trans = Matrix4.CreateTranslation(-renderNode.Camera.Position);
+                        //Render.View = trans * rot;
 
-                        //Render.View = Matrix4.LookAt(renderNode.Camera.Position,
-                        //    renderNode.Camera.Position + renderNode.Camera.Front, renderNode.Camera.Up);
+                        Render.View = Matrix4.LookAt(renderNode.Camera.Position,
+                            renderNode.Camera.Position + renderNode.Camera.Front, renderNode.Camera.Up);
 
                         Render.ActiveCamNode = nodeIndex;
                     }
