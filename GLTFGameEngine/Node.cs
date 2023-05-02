@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using OpenTK.Graphics.OpenGL4;
 using System.Diagnostics;
+using glTFLoader.Schema;
 
 namespace GLTFGameEngine
 {
@@ -18,15 +19,24 @@ namespace GLTFGameEngine
         public Vector3 Translation = Vector3.Zero;
         public Vector3 Scale = Vector3.One;
         public Quaternion Rotation = Quaternion.Identity;
-        public Node()
+        public Node(SceneWrapper sceneWrapper, int nodeIndex)
         {
-
-        }
-        public Node(glTFLoader.Schema.Node node, bool isCamera = false)
-        {
+            var node = sceneWrapper.Nodes[nodeIndex];
+            if (node.Translation != null)
+            {
+                Translation = new Vector3(node.Translation[0], node.Translation[1], node.Translation[2]);
+            }
+            if (node.Rotation != null)
+            {
+                Rotation = new Quaternion(node.Rotation[0], node.Rotation[1], node.Rotation[2], node.Rotation[3]);
+            }
+            if (node.Scale != null)
+            {
+                Scale = new Vector3(node.Scale[0], node.Scale[1], node.Scale[2]);
+            }
             if (node.Camera != null)
             {
-                Camera = new(node);
+                Camera = new(sceneWrapper, nodeIndex);
             }
         }
 
@@ -42,30 +52,6 @@ namespace GLTFGameEngine
             }
 
             var node = sceneWrapper.Nodes[nodeIndex];
-            var renderNode = sceneWrapper.Render.Nodes[nodeIndex];
-            if (node.Translation != null)
-            {
-                renderNode.Translation += new Vector3(node.Translation[0], node.Translation[1], node.Translation[2]);
-            }
-            if (node.Rotation != null)
-            {
-                renderNode.Rotation = new Quaternion(node.Rotation[0], node.Rotation[1], node.Rotation[2], node.Rotation[3]);
-            }
-            if (node.Scale != null)
-            {
-                renderNode.Scale = new Vector3(node.Scale[0], node.Scale[1], node.Scale[2]);
-            }
-            /*
-            if (parentIndex != -1)
-            {
-                var parentRenderNode = sceneWrapper.Render.Nodes[parentIndex];
-                if (parentRenderNode != null && parentRenderNode.Translation != null)
-                {
-                    renderNode.Translation += parentRenderNode.Translation;
-                    renderNode.Scale *= parentRenderNode.Scale;
-                }
-            }    
-            */
 
             if (node.Mesh != null)
             {
@@ -76,7 +62,7 @@ namespace GLTFGameEngine
             {
                 foreach (var childIndex in node.Children)
                 {
-                    sceneWrapper.Render.Nodes[childIndex] = new();
+                    sceneWrapper.Render.Nodes[childIndex] = new(sceneWrapper, childIndex);
                     ParseNode(sceneWrapper, childIndex, nodeIndex);
                 }
             }

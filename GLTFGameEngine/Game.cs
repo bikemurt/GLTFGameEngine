@@ -73,7 +73,9 @@ namespace GLTFGameEngine
             var input = KeyboardState;
             if (input.IsKeyDown(Keys.Escape)) Close();
 
-            if (sceneWrapper.Render.Nodes[sceneWrapper.Render.ActiveCamNode] == null) return;
+            var camNode = sceneWrapper.Render.Nodes[sceneWrapper.Render.ActiveCamNode];
+            if (camNode == null) return;
+
             var cam = sceneWrapper.Render.Nodes[sceneWrapper.Render.ActiveCamNode].Camera;
             if (cam == null) return;
 
@@ -88,7 +90,8 @@ namespace GLTFGameEngine
 
             if (input.IsKeyDown(Keys.W))
             {
-                cam.Position += cam.Front * cameraSpeed * (float)e.Time; // Forward
+                cam.Position += -Vector3.UnitZ * Matrix3.CreateFromQuaternion(cam.Rotation) * (float)e.Time;
+                //cam.Position += cam.Front * cameraSpeed * (float)e.Time; // Forward
             }
 
             if (input.IsKeyDown(Keys.S))

@@ -45,7 +45,7 @@ namespace GLTFGameEngine
                     if (Render.Nodes[nodeIndex] == null)
                     {
                         // this only generates the top level node.
-                        Render.Nodes[nodeIndex] = new(node);
+                        Render.Nodes[nodeIndex] = new(this, nodeIndex);
                         renderNode = Render.Nodes[nodeIndex];
                     }
 
@@ -66,8 +66,13 @@ namespace GLTFGameEngine
 
                         Render.Projection = Matrix4.CreatePerspectiveFieldOfView(camera.Yfov, camera.AspectRatio.Value,
                             camera.Znear, camera.Zfar.Value);
-                        Render.View = Matrix4.LookAt(renderNode.Camera.Position,
-                            renderNode.Camera.Position + renderNode.Camera.Front, renderNode.Camera.Up);
+
+                        Matrix4 rot = Matrix4.CreateFromQuaternion(renderNode.Camera.Rotation);
+                        Matrix4 trans = Matrix4.CreateTranslation(-renderNode.Camera.Position);
+                        Render.View = trans * rot;
+
+                        //Render.View = Matrix4.LookAt(renderNode.Camera.Position,
+                        //    renderNode.Camera.Position + renderNode.Camera.Front, renderNode.Camera.Up);
 
                         Render.ActiveCamNode = nodeIndex;
                     }
@@ -75,7 +80,6 @@ namespace GLTFGameEngine
                     // INIT and RENDER PRIMITIVES
                     if (renderNode != null)
                     {
-                        renderNode.Translation = Vector3.Zero;
                         renderNode.ParseNode(this, nodeIndex);
                     }
 

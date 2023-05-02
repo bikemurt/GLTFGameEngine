@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Transactions;
 
 namespace GLTFGameEngine
 {
@@ -59,28 +60,24 @@ namespace GLTFGameEngine
         public Vector3 Right => right;
 
         public Vector3 Position { get; set; }
+        public Quaternion Rotation { get; set; }
 
-        public Camera(glTFLoader.Schema.Node node)
+        public Camera(SceneWrapper sceneWrapper, int nodeIndex)
         {
-            Position = new(node.Translation[0], node.Translation[1], node.Translation[2]);
+            var node = sceneWrapper.Nodes[nodeIndex];
+            if (node.Translation != null)
+            {
+                Position = new Vector3(node.Translation[0], node.Translation[1], node.Translation[2]);
+            }
+            if (node.Rotation != null)
+            {
+                Rotation = new Quaternion(node.Rotation[0], node.Rotation[1], node.Rotation[2], node.Rotation[3]);
+                Rotation = Quaternion.Conjugate(Rotation);
+            }
 
-            Vector4 q = new(node.Rotation[0], node.Rotation[1], node.Rotation[2], node.Rotation[3]);
-            float rollRad = MathF.Atan2(2.0f * (q.Z * q.Y + q.W * q.X), 1.0f - 2.0f * (q.X * q.X + q.Y * q.Y));
-            float pitchRad = MathF.Asin(2.0f * (q.Y * q.W - q.Z * q.X));
-            float yawRad = MathF.Atan2(2.0f * (q.Z * q.W + q.X * q.Y), -1.0f + 2.0f * (q.W * q.W + q.X * q.X));
-
-            Pitch = MathHelper.RadiansToDegrees(pitchRad) - 90;
-            Yaw = MathHelper.RadiansToDegrees(yawRad) + 90;
-
-            Quaternion q2 = new(node.Rotation[0], node.Rotation[1], node.Rotation[2], node.Rotation[3]);
-            Vector3 t1;
-            float angle;
-            q2.ToAxisAngle(out t1, out angle);
-            Vector3 test = q2.ToEulerAngles();
-
-            Pitch = MathHelper.RadiansToDegrees(test.X);
-            Yaw = MathHelper.RadiansToDegrees(test.Y);
-            Roll = MathHelper.RadiansToDegrees(test.Z);
+            Pitch = 0;
+            Yaw = 0;
+            Roll = 0;
 
             UpdateVectors();
         }
