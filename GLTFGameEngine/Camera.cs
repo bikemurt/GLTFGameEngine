@@ -52,7 +52,7 @@ namespace GLTFGameEngine
 
         public Camera(SceneWrapper sceneWrapper, int nodeIndex)
         {
-            var node = sceneWrapper.Nodes[nodeIndex];
+            var node = sceneWrapper.Data.Nodes[nodeIndex];
             if (node.Translation != null)
             {
                 Position = new Vector3(node.Translation[0], node.Translation[1], node.Translation[2]);

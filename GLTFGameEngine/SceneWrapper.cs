@@ -11,10 +11,12 @@ using OpenTK.Windowing.GraphicsLibraryFramework;
 
 namespace GLTFGameEngine
 {
-    internal class SceneWrapper : glTFLoader.Schema.Gltf
+    internal class SceneWrapper
     {
         public string FilePath;
+
         public Render Render;
+        public glTFLoader.Schema.Gltf Data;
         public void UseShader(Shader s)
         {
             Render.ActiveShader = s;
@@ -30,24 +32,22 @@ namespace GLTFGameEngine
             // this should allow for swapping out between scenes/resources
             // future work with texture streaming and modern techniques
 
-            var scene = Scenes[Scene.Value];
+            var scene = Data.Scenes[Data.Scene.Value];
 
             foreach (var shader in Render.Shaders)
             {
                 UseShader(shader);
 
-                // iterate through nodes in the scene
+                // iterate through nodes in the scene graph
                 foreach (var nodeIndex in scene.Nodes)
                 {
-                    var node = Nodes[nodeIndex];
-                    var renderNode = Render.Nodes[nodeIndex];
+                    var node = Data.Nodes[nodeIndex];
 
-                    // INIT NODES
+                    // INIT RENDER NODES
                     if (Render.Nodes[nodeIndex] == null)
                     {
                         // this only generates the top level node.
                         Render.Nodes[nodeIndex] = new(this, nodeIndex);
-                        renderNode = Render.Nodes[nodeIndex];
                     }
 
                     // INIT LIGHTS
@@ -61,9 +61,11 @@ namespace GLTFGameEngine
 
                     // RENDER CAMERA
                     // assumption: only one camera node exists
+
+                    var renderNode = Render.Nodes[nodeIndex];
                     if (node.Camera != null && renderNode.Camera != null)
                     {
-                        var camera = Cameras[node.Camera.Value].Perspective;
+                        var camera = Data.Cameras[node.Camera.Value].Perspective;
 
                         Render.Projection = Matrix4.CreatePerspectiveFieldOfView(camera.Yfov, camera.AspectRatio.Value,
                             camera.Znear, camera.Zfar.Value);
@@ -80,10 +82,7 @@ namespace GLTFGameEngine
                     }
 
                     // INIT and RENDER PRIMITIVES
-                    if (renderNode != null)
-                    {
-                        renderNode.ParseNode(this, nodeIndex);
-                    }
+                    renderNode.ParseNode(this, nodeIndex);
 
                 }
 

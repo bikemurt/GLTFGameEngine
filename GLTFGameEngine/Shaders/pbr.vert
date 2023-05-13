@@ -16,9 +16,17 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
+const int MAX_JOINTS = 12;
+uniform mat4 jointMatrix[MAX_JOINTS];
+
 void main(void)
 {
-    worldPos = vec3(vec4(aPosition, 1.0) * model);
+    mat4 skinMatrix = aWeight.x * jointMatrix[int(aJoint.x)] +
+        aWeight.y * jointMatrix[int(aJoint.y)] +
+        aWeight.z * jointMatrix[int(aJoint.z)] +
+        aWeight.w * jointMatrix[int(aJoint.w)];
+    
+    worldPos = vec3(vec4(aPosition, 1.0) * model * skinMatrix);
 
     texCoord = aTexCoord;
     normal = aNormal;

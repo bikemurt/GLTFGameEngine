@@ -21,10 +21,10 @@ namespace GLTFGameEngine
         public Matrix4 View;
         public int ActiveCamNode;
         public List<Shader> Shaders;
-        public Render(glTFLoader.Schema.Gltf sceneData)
+        public Render(SceneWrapper sceneWrapper)
         {
-            Meshes = new Mesh[sceneData.Meshes.Length];
-            Nodes = new Node[sceneData.Nodes.Length];
+            Meshes = new Mesh[sceneWrapper.Data.Meshes.Length];
+            Nodes = new Node[sceneWrapper.Data.Nodes.Length];
         }
     }
 }

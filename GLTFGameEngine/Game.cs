@@ -18,9 +18,11 @@ namespace GLTFGameEngine
         {
             // start by loading the gltf file with scene information
             string sceneFile = "C:\\Projects\\OpenGL\\ModelsGLTF\\Cube\\cube.gltf";
-            
-            sceneWrapper = Interface.LoadModel<SceneWrapper>(sceneFile);
+
+            sceneWrapper = new();
             sceneWrapper.FilePath = sceneFile;
+            sceneWrapper.Data = Interface.LoadModel<glTFLoader.Schema.Gltf>(sceneFile);
+
             sceneWrapper.Render = new(sceneWrapper);
 
             shaders.Add(new("Shaders/pbr.vert", "Shaders/pbr.frag", RenderType.PBR));

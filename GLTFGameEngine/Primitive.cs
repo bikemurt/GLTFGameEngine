@@ -35,10 +35,10 @@ namespace GLTFGameEngine
             VertexBufferObject = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, VertexBufferObject);
 
-            var posBufferView = sceneWrapper.BufferViews[primitive.Attributes["POSITION"]];
-            var uvBufferView = sceneWrapper.BufferViews[primitive.Attributes["TEXCOORD_0"]];
-            var normalBufferView = sceneWrapper.BufferViews[primitive.Attributes["NORMAL"]];
-            var tangentBufferView = sceneWrapper.BufferViews[primitive.Attributes["TANGENT"]];
+            var posBufferView = sceneWrapper.Data.BufferViews[primitive.Attributes["POSITION"]];
+            var uvBufferView = sceneWrapper.Data.BufferViews[primitive.Attributes["TEXCOORD_0"]];
+            var normalBufferView = sceneWrapper.Data.BufferViews[primitive.Attributes["NORMAL"]];
+            var tangentBufferView = sceneWrapper.Data.BufferViews[primitive.Attributes["TANGENT"]];
 
             BufferView jointBufferView = new();
             BufferView weightBufferView = new();
@@ -49,15 +49,16 @@ namespace GLTFGameEngine
             }
             if (skeleton)
             {
-                jointBufferView = sceneWrapper.BufferViews[primitive.Attributes["JOINTS_0"]];
-                weightBufferView = sceneWrapper.BufferViews[primitive.Attributes["WEIGHTS_0"]];
+                jointBufferView = sceneWrapper.Data.BufferViews[primitive.Attributes["JOINTS_0"]];
+                weightBufferView = sceneWrapper.Data.BufferViews[primitive.Attributes["WEIGHTS_0"]];
             }
 
-            var indicesBufferView = sceneWrapper.BufferViews[primitive.Indices.Value];
+            var indicesBufferView = sceneWrapper.Data.BufferViews[primitive.Indices.Value];
 
-            var buffer = sceneWrapper.Buffers[posBufferView.Buffer];
+            var buffer = sceneWrapper.Data.Buffers[posBufferView.Buffer];
 
-            byte[] bufferBytes;
+            byte[] bufferBytes = DataStore.GetBin(sceneWrapper, buffer);
+            /*
             if (buffer.Uri != null)
             {
                 if (buffer.Uri.Contains(".bin"))
@@ -83,8 +84,9 @@ namespace GLTFGameEngine
                 // glb file parsing
                 // still need to do more work here - vertex data might be okay but not sure
                 // how to load textures which are in the binary data
-                bufferBytes = Interface.LoadBinaryBuffer((Gltf)sceneWrapper, posBufferView.Buffer, sceneWrapper.FilePath);
+                bufferBytes = Interface.LoadBinaryBuffer(sceneWrapper.Data, posBufferView.Buffer, sceneWrapper.FilePath);
             }
+            */
 
             // populate vertex data buffer
             // we can take advantage of the fact that Blender packs all vertex data prior to the index
@@ -133,13 +135,24 @@ namespace GLTFGameEngine
         public void LoadMaterial(SceneWrapper sceneWrapper, glTFLoader.Schema.MeshPrimitive primitive)
         {
             int materialIndex = primitive.Material.Value;
-            var material = sceneWrapper.Materials[materialIndex];
+            var material = sceneWrapper.Data.Materials[materialIndex];
 
             string folder = Path.GetDirectoryName(sceneWrapper.FilePath);
 
-            var albedoPath = folder + "\\" + sceneWrapper.Images[sceneWrapper.Textures[material.PbrMetallicRoughness.BaseColorTexture.Index].Source.Value].Uri;
-            var metallicRoughnessPath = folder + "\\" + sceneWrapper.Images[sceneWrapper.Textures[material.PbrMetallicRoughness.MetallicRoughnessTexture.Index].Source.Value].Uri;
-            var normalPath = folder + "\\" + sceneWrapper.Images[sceneWrapper.Textures[material.NormalTexture.Index].Source.Value].Uri;
+            var albedoPath = folder + "\\" +
+                sceneWrapper.Data.Images[
+                    sceneWrapper.Data.Textures[material.PbrMetallicRoughness.BaseColorTexture.Index].Source.Value
+                    ].Uri;
+
+            var metallicRoughnessPath = folder + "\\" +
+                sceneWrapper.Data.Images[
+                    sceneWrapper.Data.Textures[material.PbrMetallicRoughness.MetallicRoughnessTexture.Index].Source.Value
+                    ].Uri;
+
+            var normalPath = folder + "\\" + 
+                sceneWrapper.Data.Images[
+                    sceneWrapper.Data.Textures[material.NormalTexture.Index].Source.Value
+                    ].Uri;
 
             Textures.Add(new(albedoPath));
             Textures.Add(new(metallicRoughnessPath));
