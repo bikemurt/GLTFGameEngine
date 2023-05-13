@@ -28,6 +28,7 @@ namespace GLTFGameEngine
             // 2. RENDER = render using the gltf + engine data
             // why?
             // this should allow for swapping out between scenes/resources
+            // future work with texture streaming and modern techniques
 
             var scene = Scenes[Scene.Value];
 
@@ -125,42 +126,4 @@ namespace GLTFGameEngine
             }
         }
     }
-    internal class Render
-    {
-        public Mesh[] Meshes;
-        public Node[] Nodes;
-        public List<Light> Lights = new();
-
-        public bool FirstMove = true;
-        public Vector2 LastPos;
-
-        public Shader ActiveShader;
-        public Matrix4 Projection;
-        public Matrix4 View;
-        public int ActiveCamNode;
-        public List<Shader> Shaders;
-        public Render(glTFLoader.Schema.Gltf sceneData)
-        {
-            Meshes = new Mesh[sceneData.Meshes.Length];
-            Nodes = new Node[sceneData.Nodes.Length];
-        }
-    }
-
-    internal class Light
-    {
-        public int NodeIndex;
-        public Vector3 Color;
-        public float Intensity;
-    }
-
-    internal class Mesh
-    {
-        public Primitive[] Primitives;
-    }
-
-    internal static class DataStore
-    {
-        public static Dictionary<string, byte[]> BufferBytes = new();
-    }
-
 }
