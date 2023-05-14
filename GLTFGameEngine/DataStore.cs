@@ -4,6 +4,8 @@ using System.Linq;
 using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Threading.Tasks;
+using glTFLoader.Schema;
+using OpenTK.Graphics.ES20;
 using OpenTK.Mathematics;
 
 namespace GLTFGameEngine
@@ -39,8 +41,8 @@ namespace GLTFGameEngine
             return new Matrix4(
                 input[0], input[4], input[8], input[12],
                 input[1], input[5], input[9], input[13],
-                input[2], input[6], input[7], input[14],
-                input[3], input[7], input[8], input[15]
+                input[2], input[6], input[10], input[14],
+                input[3], input[7], input[11], input[15]
                 );
         }
 
@@ -68,6 +70,30 @@ namespace GLTFGameEngine
                 }
             }
             return bufferBytes;
+        }
+
+        public static Matrix4 GetMat4FromTRS(glTFLoader.Schema.Node node)
+        {
+            Matrix4 rotation = Matrix4.Identity;
+            Matrix4 scale = Matrix4.Identity;
+            Matrix4 translation = Matrix4.Identity;
+
+            if (node.Rotation != null) rotation = GetMat4FromQuat(node.Rotation);
+            if (node.Scale != null) scale = GetMat4FromScale(node.Scale);
+            if (node.Translation != null) translation = GetMat4FromTranslation(node.Translation);
+
+            return scale * rotation * translation;
+        }
+
+        public static float[] GetFloats(SceneWrapper sceneWrapper, glTFLoader.Schema.Buffer buffer,
+            glTFLoader.Schema.BufferView bufferView)
+        {
+            byte[] bufferBytes = DataStore.GetBin(sceneWrapper, buffer);
+
+            float[] bufferFloats = new float[bufferView.ByteLength / 4];
+            System.Buffer.BlockCopy(bufferBytes, bufferView.ByteOffset, bufferFloats, 0, bufferView.ByteLength);
+
+            return bufferFloats;
         }
     }
 }

@@ -11,6 +11,8 @@ namespace GLTFGameEngine
     {
         public Mesh[] Meshes;
         public Node[] Nodes;
+        public Animation[] Animations;
+        
         public List<Light> Lights = new();
 
         public bool FirstMove = true;
@@ -25,6 +27,7 @@ namespace GLTFGameEngine
         {
             Meshes = new Mesh[sceneWrapper.Data.Meshes.Length];
             Nodes = new Node[sceneWrapper.Data.Nodes.Length];
+            Animations = new Animation[sceneWrapper.Data.Animations.Length];
         }
     }
 }

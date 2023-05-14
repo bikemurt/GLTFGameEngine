@@ -26,7 +26,8 @@ void main(void)
         aWeight.z * jointMatrix[int(aJoint.z)] +
         aWeight.w * jointMatrix[int(aJoint.w)];
     
-    worldPos = vec3(vec4(aPosition, 1.0) * model * skinMatrix);
+    vec4 worldPos4 = vec4(aPosition, 1.0) * model * skinMatrix;
+    worldPos = vec3(worldPos4);
 
     texCoord = aTexCoord;
     normal = aNormal;
@@ -42,5 +43,5 @@ void main(void)
 
     TBN = mat3(T, B, N);
     
-    gl_Position = vec4(worldPos, 1.0) * view * projection;
+    gl_Position = worldPos4 * view * projection;
 }

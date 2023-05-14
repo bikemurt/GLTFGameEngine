@@ -20,6 +20,9 @@ namespace GLTFGameEngine
         public Vector3 Scale = Vector3.One;
         public Quaternion Rotation = Quaternion.Identity;
         public List<Matrix4> InverseBindMatrices = new();
+
+        public int NodeIndex = -1;
+        public int ParentNodeIndex = -1;
         public Node(SceneWrapper sceneWrapper, int nodeIndex)
         {
             var node = sceneWrapper.Data.Nodes[nodeIndex];
@@ -39,9 +42,11 @@ namespace GLTFGameEngine
             {
                 Camera = new(sceneWrapper, nodeIndex);
             }
+
+            NodeIndex = nodeIndex;
         }
 
-        public void ParseNode(SceneWrapper sceneWrapper, int nodeIndex, int parentIndex = -1)
+        public void ParseNode(SceneWrapper sceneWrapper, int nodeIndex)
         {
             // recursion protection
             // how much overhead does this cause? profile later
@@ -56,13 +61,6 @@ namespace GLTFGameEngine
             var node = sceneWrapper.Data.Nodes[nodeIndex];
             var renderNode = sceneWrapper.Render.Nodes[nodeIndex];
 
-            if (node.Mesh != null)
-            {
-                // a draw call occurs for each mesh
-                // deferred rendering?
-                RenderMesh(sceneWrapper, nodeIndex);
-            }
-
             if (node.Children != null)
             {
                 foreach (var childIndex in node.Children)
@@ -70,24 +68,26 @@ namespace GLTFGameEngine
                     if (sceneWrapper.Render.Nodes[childIndex] == null)
                     {
                         // init render nodes in the node graph
-                        sceneWrapper.Render.Nodes[childIndex] = new(sceneWrapper, childIndex);
+                        sceneWrapper.Render.Nodes[childIndex] = new(sceneWrapper, childIndex)
+                        {
+                            ParentNodeIndex = nodeIndex
+                        };
                     }
-                    ParseNode(sceneWrapper, childIndex, nodeIndex);
+                    ParseNode(sceneWrapper, childIndex);
                 }
             }
 
             if (node.Skin != null)
             {
+                // if there's a skin entry in the gltf data, when expect
+                // inverse bind matrices too
                 if (renderNode.InverseBindMatrices.Count == 0)
                 {
                     var invBindIndex = sceneWrapper.Data.Skins[node.Skin.Value].InverseBindMatrices.Value;
                     var bufferView = sceneWrapper.Data.BufferViews[invBindIndex];
                     var buffer = sceneWrapper.Data.Buffers[bufferView.Buffer];
-                    byte[] bufferBytes = DataStore.GetBin(sceneWrapper, buffer);
 
-
-                    float[] bufferFloats = new float[bufferView.ByteLength / 4];
-                    System.Buffer.BlockCopy(bufferBytes, bufferView.ByteOffset, bufferFloats, 0, bufferView.ByteLength);
+                    float[] bufferFloats = DataStore.GetFloats(sceneWrapper, buffer, bufferView);
 
                     for (int i = 0; i < bufferFloats.Length; i += 16)
                     {
@@ -104,6 +104,15 @@ namespace GLTFGameEngine
                     }
 
                 }
+            }
+
+            // Render should be the last operation
+            // at this point all child nodes should be processed, and they should know what their parents are
+            if (node.Mesh != null)
+            {
+                // a draw call occurs for each mesh
+                // deferred rendering?
+                RenderMesh(sceneWrapper, nodeIndex);
             }
         }
 
@@ -133,6 +142,7 @@ namespace GLTFGameEngine
                 var renderNode = sceneWrapper.Render.Nodes[nodeIndex];
 
                 var shader = sceneWrapper.Render.ActiveShader;
+
                 
                 for (int i = 0; i < mesh.Primitives.Length; i++)
                 {
@@ -144,8 +154,7 @@ namespace GLTFGameEngine
                         renderPrimitive.Textures[j].Use(TextureUnit.Texture0 + j);
                     }
 
-                    Matrix4 model = Matrix4.CreateFromQuaternion(renderNode.Rotation)
-                        * Matrix4.CreateScale(renderNode.Scale) * Matrix4.CreateTranslation(renderNode.Translation);
+                    Matrix4 model = DataStore.GetMat4FromTRS(node);
 
                     shader.SetMatrix4("model", model);
                     shader.SetMatrix4("view", sceneWrapper.Render.View);
@@ -157,31 +166,17 @@ namespace GLTFGameEngine
                         var joints = sceneWrapper.Data.Skins[node.Skin.Value].Joints;
                         for (int j = 0; j < joints.Length; j++)
                         {
-                            var jointIndex = joints[j];
-                            var joint = sceneWrapper.Data.Nodes[jointIndex];
+                            var jointIndex = j;
+                            var jointNodeIndex = joints[j];
 
-                            Matrix4 jointRotation = new();
-                            Matrix4 jointScale = new();
-                            Matrix4 jointTranslation = new();
+                            Matrix4 globalTransform = JointGlobalTransform(sceneWrapper, jointNodeIndex);
 
-                            if (joint.Rotation != null) jointRotation = DataStore.GetMat4FromQuat(joint.Rotation);
-                            if (joint.Scale != null) jointScale = DataStore.GetMat4FromScale(joint.Scale);
-                            if (joint.Translation != null) jointTranslation = DataStore.GetMat4FromTranslation(joint.Translation);
+                            Matrix4 jointMatrix = globalTransform * renderNode.InverseBindMatrices[jointIndex];
 
-                            Matrix4 jointMatrix = jointRotation * jointScale * jointTranslation;
-
-                            if (renderNode.InverseBindMatrices.IndexOf(jointMatrix) == -1)
-                            {
-                                continue;
-                                //throw new Exception("Joints not initialized properly");
-                            }
-
-                            Matrix4 fullJointMatrix = Matrix4.Invert(model) * jointMatrix * renderNode.InverseBindMatrices[jointIndex];
-
-                            shader.SetMatrix4("jointMatrix[" + jointIndex + "]", jointMatrix);
+                            shader.SetMatrix4("jointMatrix[" + jointIndex.ToString() + "]", jointMatrix);
                         }
                     }
-
+                    
                     if (shader.RenderType == RenderType.PBR)
                     {
                         shader.SetInt("pointLightSize", 1);
@@ -196,6 +191,31 @@ namespace GLTFGameEngine
                     GL.DrawElements(PrimitiveType.Triangles, renderPrimitive.DrawCount, DrawElementsType.UnsignedShort, 0);
                 }
             }
+        }
+
+        public static Matrix4 JointGlobalTransform(SceneWrapper sceneWrapper, int jointNodeIndex)
+        {
+            var jointNode = sceneWrapper.Data.Nodes[jointNodeIndex];
+            var jointRenderNode = sceneWrapper.Render.Nodes[jointNodeIndex];
+
+            // calculate deepest node transform first
+            var globalTransform = Matrix4.Identity;
+            var localTransform = DataStore.GetMat4FromTRS(jointNode);
+            globalTransform *= localTransform;
+
+            // traverse to the root looking for parent nodes
+            while (jointRenderNode.ParentNodeIndex != -1)
+            {
+                var parentRenderNode = sceneWrapper.Render.Nodes[jointRenderNode.ParentNodeIndex];
+
+                var parentNode = sceneWrapper.Data.Nodes[jointRenderNode.ParentNodeIndex];
+                localTransform = DataStore.GetMat4FromTRS(parentNode);
+                globalTransform = localTransform * globalTransform;
+
+                jointRenderNode = parentRenderNode;
+            }
+            
+            return globalTransform;
         }
     }
 }

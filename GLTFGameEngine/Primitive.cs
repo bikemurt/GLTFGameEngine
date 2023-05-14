@@ -58,37 +58,8 @@ namespace GLTFGameEngine
             var buffer = sceneWrapper.Data.Buffers[posBufferView.Buffer];
 
             byte[] bufferBytes = DataStore.GetBin(sceneWrapper, buffer);
-            /*
-            if (buffer.Uri != null)
-            {
-                if (buffer.Uri.Contains(".bin"))
-                {
-                    string binPath = Path.GetDirectoryName(sceneWrapper.FilePath) + "\\" + buffer.Uri;
-                    if (!DataStore.BufferBytes.ContainsKey(binPath))
-                    {
-                        bufferBytes = File.ReadAllBytes(binPath);
-                    }
-                    else
-                    {
-                        bufferBytes = DataStore.BufferBytes[binPath];
-                    }
-                }
-                else
-                {
-                    // this is not really optimized but i don't intend on using this version of GLTF
-                    bufferBytes = Convert.FromBase64String(buffer.Uri.Substring(37));
-                }
-            }
-            else
-            {
-                // glb file parsing
-                // still need to do more work here - vertex data might be okay but not sure
-                // how to load textures which are in the binary data
-                bufferBytes = Interface.LoadBinaryBuffer(sceneWrapper.Data, posBufferView.Buffer, sceneWrapper.FilePath);
-            }
-            */
 
-            // populate vertex data buffer
+            // populate vertex data buffer - several buffer views packed together
             // we can take advantage of the fact that Blender packs all vertex data prior to the index
             int vertexBufferLength = indicesBufferView.ByteOffset - posBufferView.ByteOffset;
 
@@ -113,7 +84,7 @@ namespace GLTFGameEngine
             if (skeleton)
             {
                 // joints
-                GL.VertexAttribPointer(4, 4, VertexAttribPointerType.Float, false, 4 * sizeof(float), jointBufferView.ByteOffset - posBufferView.ByteOffset);
+                GL.VertexAttribPointer(4, 4, VertexAttribPointerType.UnsignedByte, false, 4 * sizeof(byte), jointBufferView.ByteOffset - posBufferView.ByteOffset);
                 GL.EnableVertexAttribArray(4);
                 // weights
                 GL.VertexAttribPointer(5, 4, VertexAttribPointerType.Float, false, 4 * sizeof(float), weightBufferView.ByteOffset - posBufferView.ByteOffset);
