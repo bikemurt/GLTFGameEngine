@@ -8,4 +8,4 @@ Main focuses:
 -   To do: rendering without textures. Utilize material properties in glTF data
 - Animation
 - Deferred rendering (future)
-- Nanite-like algorithm for reducing triangle counts
+- Nanite-like algorithm for reducing triangle counts (future)
