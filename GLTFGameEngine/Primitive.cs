@@ -105,7 +105,10 @@ namespace GLTFGameEngine
 
         public void LoadMaterial(SceneWrapper sceneWrapper, glTFLoader.Schema.MeshPrimitive primitive)
         {
+            if (primitive.Material == null) return;
+
             int materialIndex = primitive.Material.Value;
+
             var material = sceneWrapper.Data.Materials[materialIndex];
 
             string folder = Path.GetDirectoryName(sceneWrapper.FilePath);

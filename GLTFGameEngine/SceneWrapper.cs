@@ -108,29 +108,33 @@ namespace GLTFGameEngine
                 // animation
                 for (int i = 0; i < Data.Animations.Length; i++)
                 {
-                    if (Render.Animations[i] == null) Render.Animations[i] = new();
+                    if (Render.Animations[i] == null)
+                    {
+                        Render.Animations[i] = new(this, i);
+                    }
 
                     var renderAnimation = Render.Animations[i];
-
                     var animation = Data.Animations[i];
-                    foreach (var channel in animation.Channels)
+
+                    // loop through each node which exists, and apply transforms
+                    foreach (var nodeAnimationDataPair in renderAnimation.NodeAnimationData)
                     {
-                        var samplerIndex = channel.Sampler;
-                        var inputAccessorIndex = animation.Samplers[channel.Sampler].Input;
-                        var outputAccessorIndex = animation.Samplers[channel.Sampler].Output;
+                        var nodeIndex = nodeAnimationDataPair.Key;
+                        var nodeAnimationData = nodeAnimationDataPair.Value;
 
-                        var inputBufferViewIndex = Data.Accessors[inputAccessorIndex].BufferView.Value;
-                        var inputBufferView = Data.BufferViews[inputBufferViewIndex];
-                        var inputBuffer = Data.Buffers[inputBufferView.Buffer];
-                        float[] inputData = DataStore.GetFloats(this, inputBuffer, inputBufferView);
-
-                        var outputBufferViewIndex = Data.Accessors[outputAccessorIndex].BufferView.Value;
-                        var outputBufferView = Data.BufferViews[outputBufferViewIndex];
-                        var outputBuffer = Data.Buffers[outputBufferView.Buffer];
-                        float[] outputData = DataStore.GetFloats(this, outputBuffer, outputBufferView);
-
-
+                        //Data.Nodes[nodeIndex].Translation =
+                        //    nodeAnimationData.Translations[renderAnimation.CurrentKeyframe];
+                        //Data.Nodes[nodeIndex].Scale =
+                        //    nodeAnimationData.Scales[renderAnimation.CurrentKeyframe];
+                        //Data.Nodes[nodeIndex].Rotation =
+                        //    nodeAnimationData.Rotations[renderAnimation.CurrentKeyframe];
+                        
+                        Data.Nodes[nodeIndex].Translation = renderAnimation.GetTranslation(nodeIndex, "translation");
+                        Data.Nodes[nodeIndex].Scale = renderAnimation.GetTranslation(nodeIndex, "scale");
+                        Data.Nodes[nodeIndex].Rotation = renderAnimation.GetTranslation(nodeIndex, "rotation");
                     }
+
+                    renderAnimation.UpdateTime(60);
                 }
 
             }

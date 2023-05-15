@@ -18,6 +18,7 @@ namespace GLTFGameEngine
         {
             // start by loading the gltf file with scene information
             string sceneFile = "C:\\Projects\\OpenGL\\ModelsGLTF\\Cube\\cube.gltf";
+            //string sceneFile = "C:\\Users\\mjare\\Downloads\\samurai_boy_blender\\untitled.gltf";
 
             sceneWrapper = new();
             sceneWrapper.FilePath = sceneFile;

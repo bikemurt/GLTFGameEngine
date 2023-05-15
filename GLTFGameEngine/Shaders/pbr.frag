@@ -112,7 +112,7 @@ void main()
     // HDR tonemapping - can do more research on this part
     result = result / (result + vec3(1.0));
 
-    outputColor = vec4(3*albedo, 1.0);
-    //outputColor = vec4(result, 1.0);
+    //outputColor = vec4(3*albedo, 1.0);
+    outputColor = vec4(result, 1.0);
 
 }

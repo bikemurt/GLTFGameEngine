@@ -15,7 +15,7 @@ namespace GLTFGameEngine
     {
         public Camera Camera;
         public List<int> RecurseHistory = new();
-        private const int RecurseLimit = 100;
+        private const int RecurseLimit = 200;
         public Vector3 Translation = Vector3.Zero;
         public Vector3 Scale = Vector3.One;
         public Quaternion Rotation = Quaternion.Identity;
