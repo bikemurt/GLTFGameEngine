@@ -9,8 +9,8 @@ namespace GLTFGameEngine
 {
     internal class Light
     {
-        public int NodeIndex;
         public Vector3 Color;
         public float Intensity;
+        public string type;
     }
 }

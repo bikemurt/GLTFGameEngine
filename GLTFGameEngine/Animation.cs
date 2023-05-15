@@ -69,16 +69,19 @@ namespace GLTFGameEngine
                 float outputEnd = 0.0f;
                 if (animType == "translation")
                 {
+                    if (NodeAnimationData[nodeIndex].Translations.Count == 0) continue;
                     outputStart = NodeAnimationData[nodeIndex].Translations[frameIndex][i];
                     outputEnd = NodeAnimationData[nodeIndex].Translations[frameIndexNext][i];
                 }
                 if (animType == "rotation")
                 {
+                    if (NodeAnimationData[nodeIndex].Rotations.Count == 0) continue;
                     outputStart = NodeAnimationData[nodeIndex].Rotations[frameIndex][i];
                     outputEnd = NodeAnimationData[nodeIndex].Rotations[frameIndexNext][i];
                 }
                 if (animType == "scale")
                 {
+                    if (NodeAnimationData[nodeIndex].Scales.Count == 0) continue;
                     outputStart = NodeAnimationData[nodeIndex].Scales[frameIndex][i];
                     outputEnd = NodeAnimationData[nodeIndex].Scales[frameIndexNext][i];
                 }

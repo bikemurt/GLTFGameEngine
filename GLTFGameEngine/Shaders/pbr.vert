@@ -16,7 +16,7 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
-const int MAX_JOINTS = 12;
+const int MAX_JOINTS = 50;
 uniform mat4 jointMatrix[MAX_JOINTS];
 
 void main(void)
