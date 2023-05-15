@@ -1,4 +1,4 @@
-# GLTFGameEngine
+# GLTFGameEngine C#
 The main objective of this game engine is to seamlessly render scenes, lighting, cameras and animation that are created in Blender (or any 3D design software that conforms to glTF 2.0).
 
 It is intended that high-poly scenes can be kitbashed and directly used in this engine.
