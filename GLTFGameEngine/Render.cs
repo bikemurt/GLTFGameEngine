@@ -13,7 +13,7 @@ namespace GLTFGameEngine
         public Node[] Nodes;
         public Animation[] Animations;
         
-        public List<Light> Lights = new();
+        public Dictionary<int, Light> LightNodeMap = new();
 
         public bool FirstMove = true;
         public Vector2 LastPos;

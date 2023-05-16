@@ -11,6 +11,7 @@ using glTFLoader.Schema;
 using static OpenTK.Graphics.OpenGL.GL;
 using System.Reflection.Metadata.Ecma335;
 using System.Xml.Linq;
+using Newtonsoft.Json;
 
 namespace GLTFGameEngine
 {
@@ -40,13 +41,34 @@ namespace GLTFGameEngine
 
         public static void SetSceneLight(SceneWrapper sceneWrapper, int nodeIndex)
         {
+            if (sceneWrapper.Render.LightNodeMap.ContainsKey(nodeIndex)) return;
+
             var node = sceneWrapper.Data.Nodes[nodeIndex];
             var renderNode = sceneWrapper.Render.Nodes[nodeIndex];
 
             var extKey = "KHR_lights_punctual";
             if (node.Extensions.ContainsKey(extKey))
             {
-                // possibly need to rebuild glTF with KHR light extension added to struct
+                var lightIndex = JsonConvert.DeserializeObject<KHRLightsPunctualExt>(node.Extensions[extKey].ToString()).Light;
+
+                if (sceneWrapper.Data.Extensions.ContainsKey(extKey))
+                {
+                    var khrLights = JsonConvert.DeserializeObject<KHRLightsPunctual>(
+                        sceneWrapper.Data.Extensions[extKey].ToString()
+                        );
+
+                    var light = khrLights.Lights[lightIndex.Value];
+
+                    sceneWrapper.Render.LightNodeMap.Add(nodeIndex,
+                        new Light()
+                        {
+                            Color = new Vector3(light.Color[0], light.Color[1], light.Color[2]),
+                            Position = new Vector3(node.Translation[0],
+                                node.Translation[1], node.Translation[2]),
+                            LightType = light.Type
+                        }
+                        );
+                }
             }
         }
 
@@ -123,11 +145,8 @@ namespace GLTFGameEngine
                 var node = sceneWrapper.Data.Nodes[nodeIndex];
                 var renderNode = sceneWrapper.Render.Nodes[nodeIndex];
 
-                if (renderNode.ParentNodeIndex == -1) return;
-
                 var shader = sceneWrapper.Render.ActiveShader;
 
-                
                 for (int i = 0; i < mesh.Primitives.Length; i++)
                 {
                     var renderPrimitive = sceneWrapper.Render.Meshes[meshIndex].Primitives[i];
@@ -147,6 +166,7 @@ namespace GLTFGameEngine
                     // set uniforms for animation
                     if (node.Skin != null)
                     {
+                        shader.SetInt("animate", 1);
                         var joints = sceneWrapper.Data.Skins[node.Skin.Value].Joints;
                         for (int j = 0; j < joints.Length; j++)
                         {
@@ -154,18 +174,25 @@ namespace GLTFGameEngine
                             var jointNodeIndex = joints[j];
 
                             Matrix4 globalTransform = JointGlobalTransform(sceneWrapper, jointNodeIndex);
-
                             Matrix4 jointMatrix = globalTransform * renderNode.InverseBindMatrices[jointIndex];
-
                             shader.SetMatrix4("jointMatrix[" + jointIndex.ToString() + "]", jointMatrix);
                         }
                     }
-                    
+                    else
+                    {
+                        shader.SetInt("animate", 0);
+                    }
+
                     if (shader.RenderType == RenderType.PBR)
                     {
-                        shader.SetInt("pointLightSize", 1);
-                        shader.SetVector3("pointLightPositions[0]", new Vector3(1.75863f, 3.0822f, -1.00545f));
-                        shader.SetVector3("pointLightColors[0]", new Vector3(100.0f, 100.0f, 100.0f));
+                        shader.SetInt("pointLightSize", sceneWrapper.Render.LightNodeMap.Count);
+                        int j = 0;
+                        foreach (var light in sceneWrapper.Render.LightNodeMap)
+                        {
+                            shader.SetVector3("pointLightPositions[" + j + "]", light.Value.Position);
+                            shader.SetVector3("pointLightColors[" + j + "]", light.Value.Intensity * light.Value.Color);
+                            j++;
+                        }
                     }
 
                     shader.SetVector3("camPos", sceneWrapper.Render.Nodes[sceneWrapper.Render.ActiveCamNode].Camera.Position);

@@ -20,6 +20,9 @@ namespace GLTFGameEngine
         public glTFLoader.Schema.Gltf Data;
 
         public bool AllParentNodesSet = false;
+
+        public int FPS = 60;
+        
         public void UseShader(Shader s)
         {
             Render.ActiveShader = s;
@@ -28,6 +31,35 @@ namespace GLTFGameEngine
 
         public void RenderScene()
         {
+            // when all parent nodes are set, update animations once per frame
+            if (AllParentNodesSet)
+            {
+                // ready to animate once all parent nodes are set
+                for (int i = 0; i < Data.Animations.Length; i++)
+                {
+                    if (Render.Animations[i] == null)
+                    {
+                        Render.Animations[i] = new(this, i);
+                    }
+
+                    var renderAnimation = Render.Animations[i];
+
+                    // loop through each node which exists, and apply transforms
+                    foreach (var nodeAnimationDataPair in renderAnimation.NodeAnimationData)
+                    {
+                        var nodeIndex = nodeAnimationDataPair.Key;
+                        var nodeAnimationData = nodeAnimationDataPair.Value;
+
+                        Data.Nodes[nodeIndex].Translation = renderAnimation.GetTranslation(nodeIndex, "translation");
+                        Data.Nodes[nodeIndex].Scale = renderAnimation.GetTranslation(nodeIndex, "scale");
+                        Data.Nodes[nodeIndex].Rotation = renderAnimation.GetTranslation(nodeIndex, "rotation");
+                    }
+
+                    renderAnimation.UpdateTime(FPS);
+                }
+            }
+
+            // main render loop
             foreach (var shader in Render.Shaders)
             {
                 UseShader(shader);
@@ -37,7 +69,6 @@ namespace GLTFGameEngine
                     if (Render.Nodes[i] == null) Render.Nodes[i] = new(this, i);
 
                     var node = Data.Nodes[i];
-                    var renderNode = Render.Nodes[i];
 
                     if (node.Camera != null) Node.UpdateCamera(this, i);
                     if (node.Mesh != null) Node.RenderMesh(this, i);
@@ -54,53 +85,23 @@ namespace GLTFGameEngine
                     }
                     shader.TextureIntsSet = true;
                 }
-                
-                // second iteration through glTF nodes required to establish
-                // each node's parent node. will be -1 if they are top level
-                if (!AllParentNodesSet)
+            }
+
+            // establish node parents - mainly for animation
+            if (!AllParentNodesSet)
+            {
+                for (int i = 0; i < Data.Nodes.Length; i++)
                 {
-                    for (int i = 0; i < Data.Nodes.Length; i++)
+                    var node = Data.Nodes[i];
+                    if (node.Children == null) continue;
+
+                    foreach (var childIndex in node.Children)
                     {
-                        var node = Data.Nodes[i];
-                        if (node.Children == null) continue;
-
-                        foreach (var childIndex in node.Children)
-                        {
-                            var childRenderNode = Render.Nodes[childIndex];
-                            childRenderNode.ParentNodeIndex = i;
-                        }
-                    }
-                    AllParentNodesSet = true;
-                }
-                
-                // for verbosity
-                if (AllParentNodesSet)
-                {
-                    // ready to animate once all parent nodes are set
-                    for (int i = 0; i < Data.Animations.Length; i++)
-                    {
-                        if (Render.Animations[i] == null)
-                        {
-                            Render.Animations[i] = new(this, i);
-                        }
-
-                        var renderAnimation = Render.Animations[i];
-
-                        // loop through each node which exists, and apply transforms
-                        foreach (var nodeAnimationDataPair in renderAnimation.NodeAnimationData)
-                        {
-                            var nodeIndex = nodeAnimationDataPair.Key;
-                            var nodeAnimationData = nodeAnimationDataPair.Value;
-
-                            Data.Nodes[nodeIndex].Translation = renderAnimation.GetTranslation(nodeIndex, "translation");
-                            Data.Nodes[nodeIndex].Scale = renderAnimation.GetTranslation(nodeIndex, "scale");
-                            Data.Nodes[nodeIndex].Rotation = renderAnimation.GetTranslation(nodeIndex, "rotation");
-                        }
-
-                        renderAnimation.UpdateTime(60);
+                        var childRenderNode = Render.Nodes[childIndex];
+                        childRenderNode.ParentNodeIndex = i;
                     }
                 }
-
+                AllParentNodesSet = true;
             }
         }
 

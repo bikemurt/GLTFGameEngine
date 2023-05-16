@@ -18,15 +18,20 @@ uniform mat4 projection;
 
 const int MAX_JOINTS = 50;
 uniform mat4 jointMatrix[MAX_JOINTS];
+uniform bool animate;
 
 void main(void)
 {
-    mat4 skinMatrix = aWeight.x * jointMatrix[int(aJoint.x)] +
-        aWeight.y * jointMatrix[int(aJoint.y)] +
-        aWeight.z * jointMatrix[int(aJoint.z)] +
-        aWeight.w * jointMatrix[int(aJoint.w)];
-    
-    vec4 worldPos4 = vec4(aPosition, 1.0) * model * skinMatrix;
+    vec4 worldPos4 = vec4(aPosition, 1.0) * model;
+    if (animate)
+    {
+        mat4 skinMatrix = aWeight.x * jointMatrix[int(aJoint.x)] +
+            aWeight.y * jointMatrix[int(aJoint.y)] +
+            aWeight.z * jointMatrix[int(aJoint.z)] +
+            aWeight.w * jointMatrix[int(aJoint.w)];
+
+        worldPos4 *= skinMatrix;
+    }
     worldPos = vec3(worldPos4);
 
     texCoord = aTexCoord;
